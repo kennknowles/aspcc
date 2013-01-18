@@ -1,0 +1,14 @@
+I only have some impressions from eyeballing, but here are things from the
+computer language shootout where I think ASPCC is faster than microsoft
+VbScript.
+
+I should note that VbScript is an awful languge requiring many levels of
+indirection, so I actually don't think MS did such a terrible job on their
+interpreter, performance-wise.
+
+Ackermann's function: just as bad - takes forever
+Array acces: twice as fast
+Fibonacci: slower
+Hello world: hundreds of times faster
+Nested Loops: maybe four times faster
+Object Instantiation: maybe one hundred times faster

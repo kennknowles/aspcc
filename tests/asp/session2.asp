@@ -1,0 +1,3 @@
+<%
+	response.write Session("YourMom")
+%>

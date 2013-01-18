@@ -1,0 +1,10 @@
+#SetHandler send-as-is
+#SetOutputFilter aspcc-includes;aspcc
+#AddOutputFilter aspcc-includes;aspcc .asp
+
+Action asp-script /~kenn/cgi-bin/aspcc_cgi
+AddHandler asp-script .asp
+
+# Presumably, you are copying a project over from IIS, so you have 
+# case insensitive URI's willy-nilly
+CheckSpelling on

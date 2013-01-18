@@ -1,0 +1,482 @@
+%{
+open Printf
+exception ParseError of string
+
+type assign_or_sub_t = Assign of Asp.vb_rvalue | ParamList of (Asp.vb_rvalue list)
+type prop_action = Get | Let | Set
+type do_word_t = DoUntil of Asp.vb_rvalue | DoWhile of Asp.vb_rvalue | NoDoWord
+
+let error_buf = ref ""
+
+let parse_error msg =
+	Asp.add_error
+		(sprintf "Line %i: Parse error near %s in %s context: %s"
+			(Asp.get_line ())
+			(Asp.get_lexeme ())
+			(Asp.get_context ())
+			msg
+			);
+	raise Parsing.Parse_error
+
+let cut_last li =
+	match (List.rev li) with
+	| last_item::rest -> (rest, last_item)
+	| [] -> raise (Failure "Can't cut last off nothing")
+
+%}
+
+/* html stuff*/
+%token <string> HTML 
+%token HTML_EOL
+%token START_SCRIPT START_INLINE_VALUE END_SCRIPT
+
+/* different types of statements */
+%token CALL CLASS CONST DIM DO LOOP ERASE EXECUTE EXIT FOR EACH NEXT FUNCTION IF
+%token ON ERROR OPTION EXPLICIT PRIVATE PROPERTY GET LET 
+%token SET PUBLIC RANDOMIZE REDIM UNTIL BYREF BYVAL DEFAULT
+%token SELECT CASE SET SUB WHILE WEND WITH END 
+%token PRESERVE GOTO RESUME ELSE STEP TO IN THEN ELSEIF
+%token EVAL
+
+/* we'll reduce both rem and ' to // */
+%token <string> COMMENT
+
+%token <string> IDENT
+
+/* operators */
+%token COLON
+
+%token L_PAREN R_PAREN DOT COMMA
+%token EQUALS NOT_EQUALS LESS GREATER LESS_EQUAL GREATER_EQUAL IS
+%token NOT AND OR XOR IMP EQV
+%token PLUS MINUS MULT DIV INTDIV EXP MOD
+%token UMINUS NEW
+%token CONCAT
+
+/* literals */
+%token <int> INT
+%token <int> HEX
+%token <int> OCT
+%token <float> FLOAT
+%token <string> STRING
+%token TRUE FALSE
+%token NULL NOTHING
+
+/* funny chars */
+%token EOF EOL
+
+/* precedence stuff, this is the vbscript precedence, not more normal stuff,
+so don't jack it to be "better" */
+
+/* arith have highest, then comparison, then logical */
+
+/* these are non-associative in vbscript, because there is no
+	short-circuit, but for ease, i'm going to make them left */
+%left COLON
+
+%left IMP
+%left EQV
+%left XOR
+%left OR
+%left AND
+%right NOT
+
+%left IS
+%left GREATER_EQUAL
+%left LESS_EQUAL
+%left GREATER
+%left LESS
+%left NOT_EQUALS
+%left EQUALS
+
+%left CONCAT
+
+%left PLUS MINUS
+%left MOD
+%left INTDIV
+%left DIV MULT
+%left EXP
+%right UMINUS
+
+%nonassoc INDEX_PAREN
+%left ASSIGN_EQUALS
+%left DOT
+
+%start statement_list
+%type <Asp.vb_statement list> statement_list
+
+%start rvalue
+%type <Asp.vb_rvalue> rvalue
+
+%start page							/* the entry point */
+%type <Asp.vb_statement list> page
+
+%%
+
+page:
+	| html_section page									{ $1 @ $2 }
+	| START_SCRIPT statement_list END_SCRIPT page
+		{ $2 @ $4 }
+	
+	| EOL page											{ $2 }
+	| EOF												{ [] }
+
+/*	This type of page can occur in the body's of compound statements,
+	it is basically an inverted page */
+/*mixed_content:
+	| statement_list mixed_content
+	| END_SCRIPT html_section*/
+
+html_section:
+	| HTML														
+		{ [Asp.get_line (), Asp.Html $1] }
+	| HTML START_INLINE_VALUE rvalue END_SCRIPT html_section	
+		{ (Asp.get_line (), Asp.Html $1)
+			:: (Asp.get_line (), Asp.InlineExpr $3)::$5 }
+
+
+/*	This type of page can occur in the body's of compound statements,
+	it is basically an inverted page */
+inverted_page:
+	| statement_list inverted_page							
+		{ $1 @ $2 }
+	| END_SCRIPT html_section START_SCRIPT inverted_page	
+		{ $2 @ $4 }
+
+statement_list:
+	| statement separator statement_list	
+		{	match $2 with 
+			| Some comment -> $1::(Asp.get_line (), comment)::$3
+			| None -> $1::$3 }
+	| statement								{ [$1] }
+
+	| COMMENT statement_list			
+		{ (Asp.get_line (), Asp.Comment $1)::$2 }
+
+	| EOL statement_list				
+		{ (Asp.get_line (), Asp.EmptyStatement)::$2 }
+	| EOF								{ [] }
+	|									{ [] }
+
+separator:
+	| COMMENT		{ Some (Asp.Comment $1) } /* guaranteed end in a newline */
+	| EOL			{ None }
+	| COLON			{ None }
+
+/* All variety of statements */
+statement:
+	| statement_body								{ Asp.get_line (), $1 }
+
+statement_body:
+	| CALL identifier								{ Asp.Call $2 }
+	| CLASS IDENT EOL statement_list END CLASS		
+		{ 	Asp.Class ($2, $4) }
+	
+	| CONST IDENT EQUALS rvalue						{ Asp.Const ($2, $4) }
+	| DIM identifier								{ Asp.Dim $2 }
+	
+	| DO do_condition statement_list LOOP do_condition
+		{ match ($2, $5) with
+			| (DoWhile w, NoDoWord)
+			| (NoDoWord, DoWhile w) 
+				-> Asp.CompoundStatement ((Asp.DoWhile w), $3)
+			| (DoUntil u, NoDoWord)
+			| (NoDoWord, DoUntil u) 
+				-> Asp.CompoundStatement ((Asp.DoWhile (Asp.Not u)), $3) 
+			| _ ->	parse_error "invalid 'Do' condition" }
+	
+	| ERASE identifier								{ Asp.Erase $2 }
+	| EXECUTE L_PAREN rvalue R_PAREN				{ Asp.Execute $3 }
+	| EXIT exit_keyword								{ Asp.Exit $2 }
+	| FOR for_declaration EOL statement_list NEXT	
+		{ Asp.CompoundStatement ($2, $4) }
+	
+	| FUNCTION subroutine_definition END FUNCTION	
+		{ 	Asp.Function $2 }
+	
+	| if_statement									{ $1 }
+	| ON ERROR on_error_statement					{ $3 }
+	| OPTION EXPLICIT								{ Asp.OptionExplicit }
+	| member_access_level member_default member_statement
+		{ Asp.MemberDef ($1, $2, $3) }
+	| RANDOMIZE	optional_empty_parens				{ Asp.Randomize }
+	| REDIM optional_preserve identifier
+		{	match $3 with
+			| Asp.Indices _ -> Asp.ReDim ($2, $3)
+			| _ ->	parse_error "No indices supplied  for 'Redim'" }
+
+	| select_statement								{ $1 }
+	| SET identifier EQUALS rvalue					{ Asp.Set ($2,$4) }
+	| SUB subroutine_definition END SUB				{ Asp.Sub $2 }
+	
+	| WHILE rvalue EOL statement_list WEND			
+		{ Asp.CompoundStatement ((Asp.While $2), $4) }
+
+	| WITH identifier EOL statement_list END WITH
+		{ Asp.CompoundStatement ((Asp.With $2), $4) }
+
+	| identifier EQUALS rvalue %prec ASSIGN_EQUALS	{ Asp.Assignment ($1, $3) }
+	| identifier rvalue_without_parens 				{ Asp.SubCall ($1, [$2]) }
+	| identifier rvalue_without_parens COMMA param_list
+		{ Asp.SubCall ($1, $2::$4) }
+
+	/* TODO: make this a runtime check, for compatibility */
+	| identifier									{ 
+		match $1 with 
+		| Asp.Indices (base, rvals) -> Asp.SubCall (base, rvals)
+				(*parse_error "Cannot use parentheses in a sub call\n"*)
+		| _ ->	Asp.SubCall ($1, []) }
+	
+	/* some helpful errors i guess */
+	| FUNCTION subroutine_definition END SUB		
+		{ parse_error "'End Sub' used with 'Function'" }
+
+	| SUB subroutine_definition END FUNCTION
+		{ parse_error "'End Function' used with 'Sub'" }
+
+	| CLASS IDENT EOL error END CLASS		{ Asp.Class ($2,[]) }
+
+do_condition:
+	| WHILE	rvalue	{ DoWhile $2 }
+	| UNTIL	rvalue	{ DoUntil $2 }
+	|				{ NoDoWord }
+
+/* since identifiers/indices/functions all look the same, I treat them
+as identifiers, and then deconstruct them */
+param_list:
+	rvalue param_list_tail				{ $1::$2}
+	
+param_list_tail:
+	| COMMA param_list			{ $2 }
+	|							{ [] }
+
+optional_preserve:
+	| PRESERVE			{ true }
+	|					{ false }
+
+/* stuff inside classes */
+member_default:
+	| DEFAULT			{ true }
+	|					{ false }
+
+member_statement:
+	| identifier 
+		{	match $1 with
+			| Asp.AtomicId _ | Asp.Indices _ -> Asp.MemberIdent $1
+			| _ -> parse_error "class member cannot have a dot" }
+
+	| FUNCTION subroutine_definition END FUNCTION	{ Asp.MemberFunction $2 }
+	| SUB subroutine_definition END SUB				{ Asp.MemberSub $2 }
+	| PROPERTY property_action subroutine_definition END PROPERTY
+		{	match $2 with
+			| Get -> Asp.PropertyGet $3
+			| Let -> Asp.PropertyLet $3
+			| Set -> Asp.PropertySet $3 }
+	
+
+member_access_level:
+	| PRIVATE											{ Asp.Private }
+	| PUBLIC											{ Asp.Public }
+
+property_action:
+	| GET 					{ Get }
+	| SET 					{ Set }
+	| LET					{ Let }
+
+/* */
+exit_keyword:
+	| FOR			{ Asp.ExitFor }
+	| DO			{ Asp.ExitDo }
+	| FUNCTION		{ Asp.ExitFunction }
+	| SUB			{ Asp.ExitSub }
+	| PROPERTY		{ Asp.ExitProperty }
+	| WHILE			{ Asp.ExitWhile }
+
+/* for loop headers */
+for_declaration:
+	| IDENT EQUALS rvalue TO rvalue optional_step	{ Asp.For ($1, $3, $5, $6) }
+	| EACH IDENT IN rvalue							{ Asp.ForEach ($2, $4) }
+
+optional_step:
+	| STEP rvalue	{ $2 }
+	|				{ Asp.Int 1 }
+
+/* if statements */
+if_statement:
+	| IF rvalue THEN if_then	{ match $4 with (then_block, else_block) -> 
+									Asp.If ($2, then_block, else_block) }
+
+/* we officially don't support putting  END IF on inline if statements,
+because it makes life suck */
+
+
+if_then:
+	| inline_if_then						{ $1 }
+	| multiline_if_then END IF				{ $1 }
+
+multiline_if_then:
+	| EOL statement_list multiline_if_else				{ $2, $3 }
+	| END_SCRIPT page BEGIN_SCRIPT multiline_if_else	{ $2, $4 }
+
+inline_if_then:
+	| statement inline_if_else					{ [$1], $2 } 
+
+inline_if_else:
+	| ELSEIF rvalue THEN if_then	
+		{	match $4 with 
+			(then_block, else_block) ->
+				[Asp.get_line (), Asp.If ($2, then_block, else_block)] }
+										
+	| ELSE statement						{ [$2] }
+	|										{ [] }
+
+multiline_if_else:
+	| ELSEIF rvalue THEN multiline_if_then 
+		{ match $4 with (then_block, else_block) ->
+			[Asp.get_line (), Asp.If ($2, then_block, else_block)] }
+	
+	| ELSE EOL statement_list				{ $3 }
+	|										{ [] }
+
+/* various garbage */
+subroutine_definition:
+	| IDENT function_formal_param_list EOL statement_list		
+		{ $1, $2, $4 }
+
+function_formal_param_list:
+	| L_PAREN ident_list R_PAREN	{ $2 }
+	| L_PAREN R_PAREN				{ [] }
+	|								{ [] }
+
+ident_list:
+	| IDENT ident_list_tail	{ $1::$2 }
+
+ident_list_tail:
+	| COMMA ident_list			{ $2 }
+	|						{ [] }
+
+on_error_statement:
+	| RESUME NEXT				{ Asp.OnErrorResumeNext }
+	| GOTO INT					{	if $2 <> 0 then parse_error "on error goto...";
+									Asp.OnErrorGotoZero }
+
+optional_empty_parens:
+	| L_PAREN R_PAREN			{ () }
+	|							{ () }
+
+/* select case */
+select_statement:
+	| SELECT CASE rvalue EOL select_statement_list END SELECT	
+		{ Asp.Select ($3, $5) }
+
+select_statement_list:
+	| CASE select_rvalue EOL statement_list select_statement_list	{ ($2, $4)::$5 }
+	|																{ [] }
+
+select_rvalue:
+	| ELSE						{ Asp.SelectElse }
+	| rvalue_list				{ Asp.SelectValue $1 }
+
+/* expressions */
+rvalue_without_parens:
+	| identifier					{ Asp.Identifier $1 }
+	| EVAL L_PAREN rvalue R_PAREN	{ Asp.Eval $3 }
+
+	| MINUS rvalue %prec UMINUS		{ Asp.Negative $2 }
+	| rvalue_without_parens PLUS rvalue			{ Asp.Add ($1, $3) }
+	| rvalue_without_parens MINUS rvalue			{ Asp.Subtract ($1, $3) }
+	| rvalue_without_parens MULT rvalue			{ Asp.Mult ($1, $3) }
+	| rvalue_without_parens DIV rvalue				{ Asp.Div ($1, $3) }
+	| rvalue_without_parens INTDIV rvalue			{ Asp.IntDiv ($1, $3) }
+	| rvalue_without_parens EXP rvalue				{ Asp.Exp ($1, $3) } 
+
+	| rvalue_without_parens AND rvalue		{ Asp.And ($1, $3) }
+	| rvalue_without_parens OR rvalue		{ Asp.Or ($1, $3) }
+	| rvalue_without_parens XOR rvalue		{ Asp.Xor ($1, $3) }
+	| rvalue_without_parens IMP rvalue		{ Asp.Imp ($1, $3) }
+	| rvalue_without_parens EQV rvalue		{ Asp.Eqv ($1, $3) }
+	| NOT rvalue							{ Asp.Not $2 }
+	| NEW identifier						{ Asp.New $2 }
+
+	| rvalue_without_parens EQUALS rvalue			{ Asp.Equals ($1, $3) }
+	| rvalue_without_parens NOT_EQUALS rvalue		{ Asp.NotEquals ($1, $3) }
+	| rvalue_without_parens LESS rvalue			{ Asp.Less ($1, $3) }
+	| rvalue_without_parens GREATER rvalue			{ Asp.Greater ($1, $3) }
+	| rvalue_without_parens LESS_EQUAL rvalue		{ Asp.LessEqual ($1, $3) }
+	| rvalue_without_parens GREATER_EQUAL rvalue	{ Asp.GreaterEqual ($1, $3) }
+	| rvalue_without_parens IS rvalue				{ Asp.Is ($1, $3) }
+
+	| rvalue_without_parens CONCAT rvalue	{ Asp.Concat ($1, $3) }
+
+	| HEX					{ Asp.Hex $1 }
+	| OCT					{ Asp.Oct $1 }
+	| INT					{ Asp.Int $1 }
+	| FLOAT					{ Asp.Float $1 }
+	| STRING				{ Asp.String $1 }
+	| TRUE					{ Asp.Bool true }
+	| FALSE					{ Asp.Bool false }
+	| NULL					{ Asp.Null }
+	| NOTHING				{ Asp.Nothing }
+;
+
+/* vb has weird restrictions on sub calls */
+rvalue:
+	| L_PAREN rvalue R_PAREN		{ $2 }
+	
+	| identifier					{ Asp.Identifier $1 }
+	| EVAL L_PAREN rvalue R_PAREN	{ Asp.Eval $3 }
+
+	| MINUS rvalue %prec UMINUS		{ Asp.Negative $2 }
+	| rvalue PLUS rvalue			{ Asp.Add ($1, $3) }
+	| rvalue MINUS rvalue			{ Asp.Subtract ($1, $3) }
+	| rvalue MULT rvalue			{ Asp.Mult ($1, $3) }
+	| rvalue DIV rvalue				{ Asp.Div ($1, $3) }
+	| rvalue INTDIV rvalue			{ Asp.IntDiv ($1, $3) }
+	| rvalue EXP rvalue				{ Asp.Exp ($1, $3) } 
+
+	| rvalue AND rvalue		{ Asp.And ($1, $3) }
+	| rvalue OR rvalue		{ Asp.Or ($1, $3) }
+	| rvalue XOR rvalue		{ Asp.Xor ($1, $3) }
+	| rvalue IMP rvalue		{ Asp.Imp ($1, $3) }
+	| rvalue EQV rvalue		{ Asp.Eqv ($1, $3) }
+	| NOT rvalue			{ Asp.Not $2 }
+	| NEW identifier		{ Asp.New $2 }
+
+	| rvalue EQUALS rvalue			{ Asp.Equals ($1, $3) }
+	| rvalue NOT_EQUALS rvalue		{ Asp.NotEquals ($1, $3) }
+	| rvalue LESS rvalue			{ Asp.Less ($1, $3) }
+	| rvalue GREATER rvalue			{ Asp.Greater ($1, $3) }
+	| rvalue LESS_EQUAL rvalue		{ Asp.LessEqual ($1, $3) }
+	| rvalue GREATER_EQUAL rvalue	{ Asp.GreaterEqual ($1, $3) }
+	| rvalue IS rvalue				{ Asp.Is ($1, $3) }
+
+	| rvalue CONCAT rvalue	{ Asp.Concat ($1, $3) }
+
+	| HEX					{ Asp.Hex $1 }
+	| OCT					{ Asp.Oct $1 }
+	| INT					{ Asp.Int $1 }
+	| FLOAT					{ Asp.Float $1 }
+	| STRING				{ Asp.String $1 }
+	| TRUE					{ Asp.Bool true }
+	| FALSE					{ Asp.Bool false }
+	| NULL					{ Asp.Null }
+	| NOTHING				{ Asp.Nothing }
+
+identifier:
+	| IDENT										{ Asp.AtomicId $1 }
+	| identifier DOT IDENT						{ Asp.Dot ($1, $3) }
+
+	/* VBscript allows some really annoying identifiers */
+	| identifier DOT END						{ Asp.Dot ($1, "end") }
+
+	| identifier L_PAREN rvalue_list R_PAREN %prec INDEX_PAREN
+		{ Asp.Indices ($1, $3) }
+
+/*  comma separated lists of expressions */
+rvalue_list:
+	| rvalue rvalue_list_tail	{ $1::$2 }
+	|							{ [] }
+
+rvalue_list_tail:
+	| COMMA rvalue_list		{ $2 }
+	| 						{ [] }

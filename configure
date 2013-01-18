@@ -1,0 +1,2980 @@
+#/bin/sh
+OCAMLFIND=`which ocamlfind`
+if [ -z $OCAMLFIND ]; then
+    echo Configuration cannot continue with ocamlfind in your PATH
+	echo ocamlfind is the frontend for the findlib package available at
+	echo http://www.ocaml-programming.de/programming/findlib.html
+    exit
+fi
+sed -e '1,/(\* \*)/d' < $0 > .ocamlconf_tmp.ml
+$OCAMLFIND ocamlc -linkpkg -package findlib -g -w m str.cma unix.cma -impl .ocamlconf_tmp.ml -o .ocamlconf_tmp.exe
+./.ocamlconf_tmp.exe "$@"
+rm .ocamlconf_tmp.exe .ocamlconf_tmp.ml .ocamlconf_tmp.cmo .ocamlconf_tmp.cmi
+exit
+(* *)
+module Util : sig
+(*                                                     
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+(** A module with very common operations while configuring *)
+
+(** Executes the given string in a shell, and returns what came through stdout, by
+	default clips it at 100 chars, because you are probably just filling in a command
+	path - if you don't need the output of the command, use Unix.system or Sys.command.
+	If you need all the output, use Unix.open_process_in *)
+val shell_capture : ?maxchars:int -> string -> string
+
+(** Chomps off the last character of the string - useful for path manglish sometimes *)
+val chomp : string -> string
+
+(** Chomps off the last character only if it matches given char *)
+val chomp_char : char -> string -> string
+
+(** Chomps the last character only if it is a trailing \n - convenience wrapper only *)
+val chomp_eol : string -> string
+
+(** Escapes all the slashes in a string so it can be used as a regexp *)
+val escape_slashes : string -> string
+
+(** Get the extension of a file - the stdlib can chop it off but not return it! *)
+val file_extension : string -> string
+
+(** [new_ext file newext] Puts a new extension on a file *)
+val new_ext : string -> string -> string
+
+(** Splits a string on whitespace; this is a very common thing to do in order to specify your sources
+  in a string rather than a list - save some typing :-) *)
+val split : string -> string list
+
+(** Expands all file roots X in a list into X.mli and X.ml so you needn't specify both files
+  for each module *)
+val both : string list -> string list
+
+(** Prefixes all sources files with a string, presumably something like ["src/"] *)
+val prefix : string -> string list -> string list
+
+val join : ?delim:string -> string list -> string
+
+(** A naive n^2 non-tail-recursive function for removing duplicates from a list. *)
+val unique: 'a list -> 'a list
+end
+= struct
+(*                                                     
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+let prefix pre filelist =
+	List.map (fun s -> pre ^ "/" ^ s) filelist
+
+let join ?(delim = " ") l = String.concat delim l
+
+let split s = Str.split (Str.regexp "[ \t\n]+") s;;
+
+let both stems =
+    List.flatten (List.map (fun s -> [s ^ ".mli"; s ^ ".ml"]) stems)
+
+
+
+let file_ext_index filename =
+    let len = String.length filename in
+    let reg = Str.regexp "\\." in
+    Str.search_backward reg filename (len - 1)
+        
+let file_extension filename =
+    try
+        let len = String.length filename in
+        let index = file_ext_index filename in
+        String.sub filename (index + 1) (len - index - 1)
+    with
+        | Not_found -> ""
+              
+let new_ext filename ext =
+    try
+        let len = String.length filename in
+        let index = file_ext_index filename in
+        (String.sub filename 0 (index + 1)) ^ ext
+    with
+        | Not_found -> filename ^ "." ^ ext
+
+
+(* Executes the given string in a shell, and returns what came through stdout *)
+
+let chomp s = String.sub s 0 ((String.length s) - 1)
+
+let chomp_char c s =
+    if s.[(String.length s) - 1] = c then
+		chomp s
+    else
+        s
+
+let chomp_eol = chomp_char '\n'
+
+let escape_slashes s = 
+	Str.global_replace (Str.regexp "/") "\\/" s
+
+(* for now, it uses a stupid temporary file because i'm dumb, and also
+clips the stdout crap to 100 chars unless otherwise requested*)
+let shell_capture ?(maxchars = 100) command = 
+	let inchannel = Unix.open_process_in command in
+	let buf = String.make maxchars ' ' in
+
+	let len = input inchannel buf 0 maxchars in
+	let result = String.sub buf 0 len in
+	
+	ignore (Unix.close_process_in inchannel);
+	chomp_eol result
+        
+        
+(* totally lame, naive, but easy :-) 
+   Eventually this should move into a Set *)
+let rec unique li =
+    match li with
+        | [] -> []
+        | first :: rest -> (if List.mem first rest 
+                            then unique rest
+                            else first :: (unique rest))
+end
+module CmdLineTools : sig
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+(** A very simple module for managing command line tools and their flags *)
+
+(** The type of predicates, a unique combination of which denote
+  a single command line action.  It is a bit oversimplified, and 
+  combinations that make no sense are possible, but it remains quite flexible this
+  way *)
+type predicate = 
+        [
+        | `compile | `precompile | `link | `document
+        | `ml | `c | `mly | `mll | `exe | `lib
+        | `byte | `native | `prof | `static | `shared
+        | `exe | `lib | `top
+        | `html | `texi | `latex | `dot | `man
+        ]
+
+type command = string
+type flags = string list
+
+(** This is the type of databases which know how to perform various
+  actions based on the predicates. *)
+type database
+
+(** The actions that ocamlconf already knows about - for now, these are the
+  only ones every used by AutoMake, and so if you insert new ones it is just
+  for your own good *)
+val starting_database : database
+
+(** Appends the given list of flags to the actions that
+  contain all the predicates.  If no such action exists, raises
+  Not_found to let you know you probably made a programming error. *)
+val append : database -> predicate list -> string list -> database
+
+val insert : database -> predicate list -> ?flags:flags -> command -> database
+
+val replace : database -> ?cmd:command -> ?flags:flags -> predicate list -> database
+
+val get_all : database -> predicate list -> (predicate list * command * flags) list
+
+val get : database -> predicate list -> predicate list * command * flags
+
+val insert_list : ?start_with:database -> (predicate list * command * flags) list -> database
+
+val append_list : database -> (predicate list * flags) list -> database
+end
+= struct
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+open Printf
+
+
+(** This is a bit of a relational hax, but it should make it pretty easy to
+  really change stuff *)
+
+type predicate = 
+        [
+        | `compile | `precompile | `link | `document
+        | `ml | `c | `mly | `mll | `exe | `lib
+        | `byte | `native | `prof | `static | `shared
+        | `exe | `lib | `top
+        | `html | `texi | `latex | `dot | `man
+        ]
+
+type command = string
+type flags = string list
+
+module PredicateSet = struct
+    include Set.Make(struct
+                         type t = predicate
+                         let compare = Pervasives.compare
+                     end)
+        
+    let of_list li = 
+        List.fold_left
+            (fun set elt -> add elt set)
+            empty
+            li
+end
+
+type predicate_set = PredicateSet.t
+
+module CommandSet = struct
+    include Set.Make(struct
+                         type t = PredicateSet.t * command * flags
+                                 
+                         (* Compare the entry only according to the predicates, 
+                            so no duplicates can be added *)
+                         let compare = (fun (preds1, _, _) (preds2, _, _) -> 
+                                            PredicateSet.compare preds1 preds2)
+                     end)
+
+    let map f s = 
+        fold (fun elt result -> add (f elt) result) s empty
+
+end
+
+type database = CommandSet.t
+
+let has_predicates predicates (preds, command, flags) =
+    PredicateSet.subset (PredicateSet.of_list predicates) preds
+
+(* for every entry in the database, if it contains the
+   given predicates, then modify its flags.
+   If none are found, then raise Not_found *)
+let append set predicates flags =
+    let matched, unmatched = CommandSet.partition (has_predicates predicates) set in
+
+    if CommandSet.cardinal matched = 0 then raise Not_found else
+        CommandSet.union unmatched
+            (CommandSet.map (fun (p,c,f) -> (p,c,f @ flags)) matched)
+
+
+(* insert a new transform into the database *)
+let insert set predicates ?(flags = []) cmd =
+    CommandSet.add (PredicateSet.of_list predicates, cmd, flags) set
+
+(* for every entry in the database containing the given
+   predicates, change its base command to cmd, and
+   flags to flags, if they are provided (if they are None, then
+   no action is taken *)
+let replace set ?cmd ?flags predicates =
+    let matched, unmatched = CommandSet.partition (has_predicates predicates) set in
+
+    if CommandSet.cardinal matched = 0 then raise Not_found else
+
+        CommandSet.union unmatched
+            (CommandSet.map (fun (p,c,f) ->
+                                 match cmd, flags with
+                                     | None, None -> (p,c,f)
+                                     | Some cmd, None -> (p,cmd,f)
+                                     | None, Some fl -> (p,c,fl)
+                                     | Some cmd, Some fl -> (p,cmd,fl))
+                 matched)
+
+(* return all commands that match the predicate *)
+let get_all set predicates =
+    let matched = CommandSet.filter (has_predicates predicates) set in
+    if CommandSet.cardinal matched = 0 then
+        raise Not_found
+    else
+        List.map (fun (preds, cmd, flags) -> PredicateSet.elements preds, cmd, flags)
+            (CommandSet.elements matched)
+
+(* Gets the most specific item - I should enable "most specific"
+   flag on other things... there is a flaw where anything that is a subset
+   of another cannot be manipulated on its own... maybe just make a flag
+   `only predicate *)
+let get set predicates =
+    let rec most_specific dblist min entry =
+        match dblist with
+            | [] -> entry
+            | (preds, cmd, flags) :: rest ->
+                  let len = List.length preds in
+                  if len < min then
+                      most_specific rest len (preds,cmd,flags)
+                  else
+                      most_specific rest min entry
+    in
+
+    let matched = get_all set predicates in
+    most_specific matched max_int (List.hd matched)
+
+
+let insert_list ?(start_with = CommandSet.empty) li =
+    List.fold_left
+        (fun set (preds, cmd, flags) -> insert set preds cmd ~flags)
+        CommandSet.empty
+        li
+
+let append_list set li =
+    List.fold_left
+        (fun set (preds, flags) -> append set preds flags)
+        set
+        li
+        
+let starting_database = insert_list [
+    [`compile; `ml; `byte], "ocamlc", ["-c"];
+    [`compile; `ml; `native], "ocamlopt", ["-c"];
+    [`compile; `ml; `prof], "ocamlcp", ["-c"];
+    
+    [`compile; `c], "gcc", ["-DNATIVE_CODE"; "-I`ocamlc -where`"; "-c"];
+    
+    [`precompile; `mly], "ocamlyacc", [];
+    [`precompile; `mll], "ocamllex", [];
+    
+    [`link; `exe; `ml; `byte], "ocamlc", [];
+    [`link; `exe; `ml; `native], "ocamlopt", [];
+    [`link; `exe; `ml; `byte; `prof], "ocamlcp", [];
+    
+    [`link; `lib; `ml; `byte], "ocamlc", ["-a"];
+    [`link; `lib; `ml; `native], "ocamlopt", ["-a"];
+    [`link; `lib; `ml; `byte; `prof], "ocamlcp", ["-a"];
+    
+    [`link; `lib; `c; `static], "ar", ["rc"];
+    [`link; `lib; `c; `shared], "gcc", ["-shared"];
+    
+    [`link; `top; `ml; `byte], "ocamlmktop", [];
+    
+    [`document; `html], "ocamldoc", ["-html"];
+    [`document; `texi], "ocamldoc", ["-texi"];
+    [`document; `latex], "ocamldoc", ["-latex"];
+    [`document; `dot], "ocamldoc", ["-dot"];
+    [`document; `man], "ocamldoc", ["-man"]
+]
+end
+module Sources : sig
+
+(** A module for managing sets of sources, and manipulating them according to
+  their filetypes.*)
+
+(** These are the filetypes that ocamlconf knows about *)
+type known_filetype =
+  [ `c | `cmi | `cmo | `cmx | `ml | `mli | `mll | `mly | `o | `other ]
+
+(** The type of a set of sources. *)
+type t
+
+(** An empty set of sources *)
+val empty : t
+
+(** [get sources filetypes] returns a list of the files in sources matching the given
+  types.  In the future they will automatically be topologically sorted by dependency,
+  but that code has not been integrated. *)
+val get : t -> known_filetype list -> string list
+
+(** [all sources] simply returns every source file in the set of sources *)
+val all : t -> string list
+
+(** [add_by_extension sources file] will add the file to the set of sources.  It will
+  detect its filetype by its extension, and will also automatically add all byproducts this
+  file will create *)
+val add_by_extension : t -> string -> t
+
+(** From a list of files, creates a set of sources.  *)
+val of_list : string list -> t
+end
+= struct
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+type known_filetype = [ `mli | `ml | `mll | `mly | `c | `cmi | `cmo | `cmx | `o | `other ]
+
+module SourceMap = Map.Make( struct
+                                 type t = known_filetype
+                                 let compare = Pervasives.compare 
+                             end )
+
+type t = (string list) SourceMap.t
+        
+let empty = SourceMap.empty
+
+(* Returns a list of all the types of sources specified, in the order they
+    are specified.  TODO: topological sort based on dependencies *)
+let get sources desired_types =
+    SourceMap.fold
+        (fun sourcetype sourcelist all_list ->
+             if List.mem sourcetype desired_types then
+                 all_list @ sourcelist
+             else
+                 all_list)
+        sources
+        []
+
+let all sources =
+    SourceMap.fold
+        (fun sourcetype sourcelist all_list -> all_list @ sourcelist)
+        sources
+        []
+        
+
+let append sources filemappings =
+    List.fold_left
+        (fun sources (sourcetype, newfiles) ->
+             let curr = get sources [sourcetype] in
+             SourceMap.add sourcetype (curr @ newfiles) sources)
+        sources
+        filemappings
+
+open Util
+let add_by_extension sources file =
+    match file_extension file with
+		| "mli" ->
+              append sources [
+                  `mli, [file];
+                  `cmi, [new_ext file "cmi"]
+              ]
+
+        | "ml" ->
+              append sources [
+                  `ml, [file];
+                  `cmi, [new_ext file "cmi"];
+				  `cmo, [new_ext file "cmo"];
+				  `cmx, [new_ext file "cmx"];
+				  `other, [new_ext file "o"]
+              ]
+              
+        | "c" ->
+              append sources [
+                  `c, [file];
+                  `o, [new_ext file "o"]
+              ]
+              
+        | "mll" ->
+              append sources [
+                  `mll, [file];
+				  `ml, [new_ext file "ml"];
+				  `cmi, [new_ext file "cmi"];
+				  `cmo, [new_ext file "cmo"];
+				  `cmx, [new_ext file "cmx"];
+				  `other, [new_ext file "o"]
+              ]
+              
+		| "mly" ->
+              append sources [
+                  `mly, [file];
+				  `ml, [new_ext file "ml"];
+				  `mli, [new_ext file "mli"];
+				  `cmi, [new_ext file "cmi"];
+				  `cmo, [new_ext file "cmo"];
+				  `cmx, [new_ext file "cmx"];
+				  `other, [new_ext file "o"]
+              ]
+              
+        | _ -> sources
+              
+let of_list files = 
+    List.fold_left add_by_extension empty files
+
+
+end
+module Libs : sig
+
+(** A nearly trivial module for managing libs that are not findlib-enabled *)
+
+(** The type of libraries.  They are merely two names for byte code and native code *)
+type t = { cmxa : string list; cma : string list; }
+
+(** The empty set of libraries *)
+val empty : t
+
+(** Add a library by name.  The name must not contain an extension - these will be
+  added automatically depending on whether byte code or native code is chosen *)
+val add : t -> string -> t
+
+(** From a list of non-suffixed names of libraries, create a set of libs *)
+val of_list : string list -> t
+end
+= struct
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+type t = {
+    cmxa : string list;
+    cma : string list
+}
+            
+let empty = {
+	cmxa = [];
+    cma = [];
+}
+                    
+                    
+let add libs libname =
+    {libs with
+         cma = libs.cma @ [libname ^ ".cma"];
+         cmxa = libs.cmxa @ [libname ^ ".cmxa"]}
+    
+let of_list libs =
+    List.fold_left add empty libs
+end
+module Product : sig
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+class virtual base : string -> object method name : string end
+
+(** Where/how to install the target *)
+type destination = 
+        [
+        | `bin				(** Defaults to /usr/local/bin *)
+        | `lib				(** Defaults to /usr/local/lib/ocaml/packagename - incomplete *)
+        | `findlib			(** Uses findlib to install all appropriate files *)
+        | `nowhere			(** Is not installed *)
+        | `other of string	(** A literal directory to install the file to?? *)
+        ]
+
+class virtual sourced :
+    ?source_filetypes:Sources.known_filetype list ->
+    ?cleaned_filetypes:Sources.known_filetype list ->
+    sources:Sources.t ->
+    string ->
+object
+    method cleaned : string list
+    method name : string
+    method sources : string list
+    method has_c_sources : bool
+end
+
+class virtual caml :
+    sources:Sources.t ->
+    ?libs:Libs.t ->
+    string ->
+object
+    method byte_libs : string list
+    method byte_objects : string list
+    method obj_objects : string list
+    method cleaned : string list
+    method interfaces : string list
+    method name : string
+    method sources : string list
+    method has_c_sources : bool
+end
+
+class virtual opt_caml :
+    sources:Sources.t ->
+    ?libs:Libs.t ->
+    string ->
+object
+    method byte_libs : string list
+    method byte_objects : string list
+    method obj_objects : string list
+    method cleaned : string list
+    method interfaces : string list
+    method name : string
+    method opt_libs : string list
+    method opt_objects : string list
+    method sources : string list
+    method has_c_sources : bool
+end
+    
+class virtual ocamlfind :
+    findlibs:string list ->
+    string -> 
+object 
+    method findlibs : string list 
+    method name : string 
+end
+
+class virtual installed :
+    dest:destination ->
+    string ->
+object
+    method destination : destination
+    method name : string
+end
+
+class script :
+    ?dest:destination ->
+    string ->
+object
+    method name : string
+    method destination : destination
+end
+
+class executable :
+    ?sources:Sources.t ->
+    ?findlibs:string list ->
+    ?libs:Libs.t ->
+    ?dest:destination ->
+    string ->
+object
+    method byte_libs : string list
+    method byte_objects : string list
+    method obj_objects : string list
+    method destination : destination
+    method cleaned : string list
+    method findlibs : string list
+    method interfaces : string list
+    method name : string
+    method opt_libs : string list
+    method opt_name : string
+    method opt_objects : string list
+    method sources : string list
+    method has_c_sources : bool
+end
+
+class toplevel :
+    ?sources:Sources.t ->
+    ?findlibs:string list ->
+    ?libs:Libs.t ->
+    ?dest:destination ->
+    string ->
+object
+    method byte_libs : string list
+    method destination : destination
+    method byte_objects : string list
+    method obj_objects : string list
+    method cleaned : string list
+    method findlibs : string list
+    method interfaces : string list
+    method name : string
+    method sources : string list
+    method has_c_sources : bool
+end
+
+class documentation :
+    ?findlibs:string list ->
+    ?sources:Sources.t ->
+    ?dest:destination ->
+    string ->
+object
+    method cleaned : string list
+    method destination : destination
+    method dot_file : string
+    method findlibs : string list
+    method html_dir : string
+    method latex_file : string
+    method man_dir : string
+    method name : string
+    method sources : string list
+    method texi_file : string
+    method has_c_sources : bool
+end
+
+class library :
+    ?shared:bool ->
+    ?sources:Sources.t ->
+    ?findlibs:string list ->
+    ?libs:Libs.t ->
+    ?dest:destination ->
+    string ->
+object
+    method byte_libs : string list
+    method destination : destination
+    method byte_objects : string list
+    method obj_objects : string list
+    method c_a_name : string
+    method c_so_name : string
+    method cleaned : string list
+    method cma_name : string
+    method cmxa_a_name : string
+    method cmxa_name : string
+    method findlibs : string list
+    method interfaces : string list
+    method name : string
+    method opt_libs : string list
+    method opt_objects : string list
+    method sources : string list
+    method has_c_sources : bool
+    method shared : bool
+
+    method cma_c_deps : string list
+    method cmxa_c_deps : string list
+end
+end
+= struct
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+open Printf;;
+open Util
+
+type destination = [`bin | `lib | `findlib | `nowhere | `other of string]
+
+(* A general superclass for all targets *)
+class virtual base name = object(self)
+    method name : string = name
+end
+
+        
+(* Some convenient mixin-classes *)
+class virtual sourced 
+    ?(source_filetypes = [`mli; `ml; `c])
+    ?(cleaned_filetypes = [`cmi; `cmo; `cmx; `o; `other])
+    ~sources
+    name 
+    = 
+object(self)
+    inherit base name
+        
+    method has_c_sources = Sources.get sources [`c] <> []
+    method sources = Sources.get sources source_filetypes
+    method cleaned = Sources.get sources cleaned_filetypes
+end
+    
+class virtual caml 
+    ~sources
+    ?(libs = Libs.empty) 
+    name
+    =
+object(self)
+    inherit sourced ~sources name as super
+    
+    method interfaces = Sources.get sources [`cmi]
+    method byte_objects = Sources.get sources [`cmo]
+    method obj_objects = Sources.get sources [`o]
+    method byte_libs = libs.Libs.cma
+end
+    
+class virtual opt_caml
+    ~sources
+    ?(libs = Libs.empty)
+    name
+    =
+object(self)
+    inherit caml ~sources ~libs name as super
+
+    method opt_objects = Sources.get sources [`cmx]
+    method opt_libs = libs.Libs.cmxa
+end
+    
+
+class virtual ocamlfind 
+    ~findlibs
+    name 
+    = 
+object(self)
+    inherit base name
+
+    method findlibs : string list = findlibs
+end
+
+class virtual installed
+    ~(dest : destination)
+    name
+    =
+object(self)
+    inherit base name
+    method destination = dest
+end
+
+class script
+    ?(dest = `bin)
+    name
+    =
+object(self)
+    inherit base name
+    inherit installed ~dest name
+end
+
+class executable 
+    ?(sources = Sources.empty)
+    ?(findlibs = [])
+    ?(libs = Libs.empty)
+    ?(dest = `bin)
+	name 
+    =
+object(self)
+    inherit base name as super
+    inherit opt_caml ~sources ~libs name
+    inherit ocamlfind name ~findlibs
+    inherit installed ~dest name
+
+    method opt_name = name ^ ".opt"
+end
+
+class toplevel
+    ?(sources = Sources.empty)
+    ?(findlibs = [])
+    ?(libs = Libs.empty)
+    ?(dest = `nowhere)
+	name 
+    =
+object(self)
+    inherit base name as super
+    inherit caml name ~sources ~libs as caml
+    inherit ocamlfind name ~findlibs as ocamlfind
+    inherit installed ~dest name
+end
+        
+class documentation
+    ?(findlibs = [])
+    ?(sources = Sources.empty)
+    ?(dest = `nowhere)
+    name
+    =
+object(self)
+    inherit ocamlfind ~findlibs name as ocamlfind
+    inherit sourced 
+        ~source_filetypes:[`mli; `ml]
+        ~cleaned_filetypes:[]
+        ~sources
+        name as sourced
+    inherit installed ~dest name
+
+    method html_dir = name ^ ".html"
+    method man_dir = name ^ ".man"
+    method texi_file = name ^ ".texi"
+    method dot_file = name ^ ".dot"
+    method latex_file = name ^ ".text"
+    
+end
+
+class library
+    ?(shared = false)
+	?(sources = Sources.empty)
+	?(findlibs = [])
+	?(libs = Libs.empty)
+    ?(dest = `findlib)
+	name 
+    =
+object(self)
+    inherit base name as super
+    inherit opt_caml ~sources ~libs name as caml
+    inherit ocamlfind ~findlibs name as ocamlfind
+    inherit installed ~dest name
+        
+    method cma_name = name ^ ".cma"
+    method cmxa_name = name ^ ".cmxa"
+    method cmxa_a_name = name ^ ".a"
+    method c_a_name = "lib" ^ name ^ ".a"
+    method c_so_name = "dll" ^ name ^ ".so"
+    method has_c_sources = ([] <> Sources.get sources [`c])
+    method shared = shared
+                               
+    method cma_c_deps =
+        match self # has_c_sources, shared with
+            | false, _ -> []
+            | true, false -> [self # c_a_name]
+            | true, true -> [self # c_a_name; self # c_so_name]
+
+    method cmxa_c_deps = if self # has_c_sources then [self # c_a_name] else []
+end
+end
+module Package : sig
+
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+(** A module for carrying around all the metadata needed to build a whole package. *)
+
+(** A tagged variant of the product types, so we can utilize their specialization later *)
+type product =
+        [ `documentation of Product.documentation
+        | `executable of Product.executable
+        | `library of Product.library
+        | `script of Product.script
+        | `toplevel of Product.toplevel ]
+
+
+(** The type of packages *)
+type t = {
+    package : string;
+    version : string;
+    findlib_package : string;
+    cleaned : string list;
+    debug : bool;
+    destdir : string;
+    sources : Sources.t;
+    findlibs : string list;
+    libs : Libs.t;
+    includes : string list;
+    findlib_installed_files : string list;
+    findlib_installs_opt : bool;
+    command_line : CmdLineTools.database;
+    products : product list;
+}
+
+val create :
+    ?package:string ->
+    ?version:string ->
+    ?findlib_package:string ->
+    ?cleaned:string list ->
+    ?destdir:string ->
+    ?debug:bool ->
+    ?sources:Sources.t ->
+    ?findlibs:string list ->
+    ?libs:Libs.t ->
+    ?includes:string list ->
+    ?findlib_installed_files:string list ->
+    ?findlib_installs_opt:bool ->
+    ?command_line:CmdLineTools.database -> 
+    product list -> 
+    t
+
+(** {6 Shortcuts for Product creation} *)
+
+(** A shortcut function for creating a {!Product.library} and tagging it. *)
+val library :
+    ?dest:Product.destination ->
+    ?shared:bool ->
+    ?sources:Sources.t ->
+    ?findlibs:string list ->
+    ?libs:Libs.t -> string -> [> `library of Product.library ]
+
+(** See {!Package.library} *)
+val executable :
+    ?sources:Sources.t ->
+    ?findlibs:string list ->
+    ?libs:Libs.t ->
+    ?dest:Product.destination ->
+    string -> [> `executable of Product.executable ]
+
+(** See {!Package.library} *)
+val script :
+    ?dest:Product.destination -> string -> [> `script of Product.script ]
+
+(** See {!Package.library} *)
+val toplevel :
+    ?sources:Sources.t ->
+    ?findlibs:'a ->
+    ?libs:Libs.t ->
+    ?dest:Product.destination ->
+    ?findlibs:string list -> string -> [> `toplevel of Product.toplevel ]
+
+(** See {!Package.library} *)
+val documentation :
+    ?findlibs:string list ->
+    ?sources:Sources.t ->
+    string -> [> `documentation of Product.documentation ]
+
+end
+= struct
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+type product = 
+        [
+        | `executable of Product.executable
+        | `library of Product.library
+        | `documentation of Product.documentation
+        | `script of Product.script
+        | `toplevel of Product.toplevel
+        ]
+
+let library ?dest ?shared ?sources ?findlibs ?libs name = 
+    `library (new Product.library ?dest ?shared ?sources ?findlibs ?libs name)
+    
+let executable ?sources ?findlibs ?libs ?dest name =
+    `executable (new Product.executable ?sources ?findlibs ?libs ?dest name)
+    
+let script ?dest name = 
+    `script (new Product.script ?dest name)
+    
+let toplevel ?sources ?findlibs ?libs ?dest ?findlibs name = 
+    `toplevel (new Product.toplevel ?sources ?findlibs ?libs ?dest name)
+
+let documentation ?findlibs ?sources name =
+    `documentation (new Product.documentation ?findlibs ?sources name)
+
+type t = {
+	package : string;
+    version : string;
+    findlib_package : string;
+    cleaned : string list;
+    debug : bool;
+    destdir : string;
+    sources : Sources.t;
+    findlibs : string list;
+    libs : Libs.t;
+    includes : string list;
+    findlib_installed_files : string list;
+    findlib_installs_opt : bool;
+    command_line : CmdLineTools.database;
+    products : product list
+}
+
+let create
+	?(package = "")
+    ?(version = "")
+    ?(findlib_package = package)
+    ?(cleaned = [])
+    ?(destdir = "")
+    ?(debug = false)
+	?(sources = Sources.empty)
+	?(findlibs = [])
+	?(libs = Libs.empty)
+	?(includes = [])
+	?(findlib_installed_files = [])
+	?(findlib_installs_opt = true)
+	?(command_line = CmdLineTools.starting_database) 
+    products
+    =
+    {
+        package = package;
+        findlib_package = findlib_package;
+        version = version;
+        cleaned = cleaned;
+        destdir = destdir;
+        debug = debug;
+	    sources = sources;
+	    findlibs = Util.unique findlibs;
+	    libs = libs;
+	    includes = includes;
+	    findlib_installed_files = findlib_installed_files;
+	    findlib_installs_opt = findlib_installs_opt;
+	    command_line = command_line;
+        products = products
+    }
+end
+module Conf : sig
+(*                                                     
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+(** 
+  A module for build-time configuration.
+  
+  Things it can do at build time:
+  {ol
+  {- Check that certain findlib packages are installed, and where.}
+  {- Search for a file from a list of possibilities, for crude trial-and-error location.}
+  {- Process user parameters for the build.}
+  {- Be easily extended}}
+
+  The basic functionality is through the [configure_with] function, which takes
+  a [configuration] that you create, and applies a list of [configuration_item]s to it.
+  If you don't have any extensions to add to the configuration, or extended configuration
+  items, you can use the [configure] function and it will return a [unit configuration].
+
+  Running the [configure] or [configure_with] functions will cause the command line to be
+  parsed according to the [configure_item]s you pass them.
+
+  See the descriptions for the [configuration] and [configuration_item] classes
+  for more details.
+  
+*)
+
+(** The types of values that the configuration tracks for compile-time
+  parameters. *)
+type param_value =
+	| StringList of string list	(** A space separated string must be passed by the user. *)
+	| String of string
+	| Bool of bool
+
+(** {4 Core classes} *)
+
+(** The class of configurations, parameterized by a value that can be used as an 
+  extension.  To make a custom configuration that tracks more data than the built-in
+  version, inherit from this class and override the [extension] method.  Then instantiate
+  your custom configuration yourself, and pass it to [configure_with]. *)
+class ['a] configuration :
+    'a ->
+object
+    (** {4 Customization} *)
+    
+    (** A field that may be overridden by whatever you like, in order to
+      make an extended powerful configuration *)
+    method extension : 'a
+   
+    (** {4 Things all configs must have} *)
+
+    (** The prefix of the installation, such as ["/usr/local"] *)
+    method prefix : string
+    method set_prefix : string -> unit
+
+    (** The makefile name, such as "Makefile", "makefile", or "GNUMakefile" *)
+    method makefile : string
+    method set_makefile : string -> unit
+
+    (** {4 Findlib packages} *)
+
+    (** [add_findlib name version path] lets the configuration know that you found
+      the findlib.  It is only really used to print a nice summary. *)
+    method add_findlib : string -> string -> string -> unit
+
+    (** Gets the path to a findlib package you found *)
+    method findlib_path : string -> string
+    
+    (** Gets the version of a findlib package you found *)
+    method findlib_version : string -> string
+   
+    (** {4 Path searches} *)
+
+    (** Indicates to the configuration that you found a path, not necessarily
+      corresponding to a findlib-package *)
+    method add_path : string -> string -> unit
+        
+    (** Retrieves some path by key *)
+    method get_path : string -> string
+    
+    (** {4 Compile-time parameters} *)
+
+    (** Sets a compile-time parameter *)
+    method set_param : string -> param_value -> unit
+
+    (** Returns a compile-time parameter *)
+    method get_param : string -> param_value
+
+    (** Merely sugar so you don't have to pattern match the
+      results of [get_param] *)
+    method get_stringlist : string -> string list
+    method get_string : string -> string
+    method get_bool : string -> bool
+
+    (** {4 Pretty-printing} *)
+
+    (** Summarizes the data in the configuration - override if you wish to
+      summarize the data in the [extension] field *)
+    method summarize : string
+    method summarize_globals : string
+    method summarize_params : string
+    method summarize_paths : string
+    method summarize_findlibs : string
+end
+
+(** This is the type of a configuration item that operates on
+  an ['a configuration].  To make a custom one, just implement this interface.
+  The cmdline method indicates what command line parameters control this item, and
+  the exec method allows imperative modification of the configuration. *)
+class type ['a] configuration_item =
+object
+
+    (** The Arg comamnd line arguments that go with this configuration item (can be empty) *)
+    method cmdline : (Arg.key * Arg.spec * Arg.doc) list
+
+    (** Processes the configuration *)
+    method exec : 'a configuration -> unit
+end
+
+(** {4 Built-in Configuration Items} *)
+
+(**
+    [findlib_check name] checks that a findlib package called [name]
+    exists.  If [min] or [max] are specified, then it ensures the package
+    has a version within those constraints.
+*)
+val findlib_check : ?min:string -> ?max:string -> string -> 'a configuration_item
+
+(** 
+    [path_search name doc paths] performs a rudimentary search through the list of
+    paths.  This provides a method for locating libraries that don't have any
+    other way to be found.
+*)
+val path_search : ?doc:string -> string -> string list -> 'a configuration_item
+
+(**
+    [param name defaultvalue] provides a compile-time parameter that can be overridden
+    by the user.  The default value is mandatory so that ocamlconf knows what type the user
+    should be supplying.
+*)
+val param : ?doc:string -> string -> param_value -> 'a configuration_item
+
+(** {4 Configuration Functions} *)
+
+(** 
+  See [configure_with] if you want to use an extended configuration.  But if not,
+  just call this with your list of [configuration_item]s and it will return
+  a [unit configuration]. 
+  
+  At this stage, the command line will be parsed and help output will
+  be provided to users who request it, using the documentation strings
+  you may or may not have provided when creating configuration items.
+*)
+val configure : ?omit_builtin_checks:bool -> unit configuration_item list -> unit configuration
+
+(** If you created custom configuration, you should pass an instantiated version
+  of the the class to this function, and each [configuration_item] will operate
+  upon it.  Nothing is returned because the modifications are in place, as
+  this is an imperative object-oriented approach *)
+val configure_with : ?omit_builtin_checks:bool -> 'a configuration -> 'a configuration_item list -> unit
+
+(** {4 Exceptions - configuration failure} *)
+
+(** When configuration fails, but the cookie-cutter exceptions don't work for you, this
+  exception will just output the string you give it (raise this from inside your custom
+  [configuration_item]) *)
+exception Configuration_failure of string
+
+(** If a findlib package has a version that is incompatible with the [min, max] range you
+  specify, this exception will be raised. *)
+exception Incorrect_version of string * string * string option * string option
+exception Package_not_found of string * (string list)
+exception Incorrect_type of string
+
+end
+= struct
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+(* 
+	This should look a lot like an arg_spec from Arg.
+	The types I can think of autoconf using are String, 
+	StringList of <separator>, Toggle
+
+	Each entry is (<flag>, <kind>, <defaultvalue>, <description>)
+
+	For my purposes, I'll omit the full autoconf suite of directory control, but the
+	following will be built in to configure:
+
+	--prefix, String, "/usr/local", "The prefix under which non-findlib programs will be installed."
+	--xxxflags, where xxx is one of the tools we know about.  This will be dumped right into the makefile.
+
+	--rename, StringList of ",", [], "A comma-separated list to be taken two words at a time as substitutions on the
+											names of installed programs, so you can rename them to whatever you want."
+	--regexp, String, "", "Like rename only cooler"
+
+	All user supplied thingies will be prefixed by '--' and lowercased.  You can also dump your configuration to a .ml
+	file and add it to your sources, which kind of rules.
+
+	For each item, it will make a publicly accesible variable:
+
+	StringList will be a list of strings, String will be a string, toggle will be a bool
+
+
+   What we demand is that the configuration be declarative, so that we can generate the command
+   line parsing from the same stuff that handles it, and performs tests.
+
+   Now, you can make your own configuration_item`s to do this, and you can pass in a differently
+   parameterized configuration to them as well.
+
+   All the standard configuration items act on a polymorphic configuration, so it should be fine.
+
+*)
+
+module Versions = struct
+
+	let rec compare list1 list2 =
+		match list1, list2 with
+		| [], [] -> 0
+		| _, [] -> 1
+		| [], _ -> -1
+		| first1 :: rest1, first2 :: rest2 ->
+			let result = Pervasives.compare first1 first2 in
+			if result = 0 then
+				compare rest1 rest2
+			else
+				result
+
+    let flatten_split reg ver =
+        List.map (fun x -> 
+                      match x with
+                          | Str.Delim s
+                          | Str.Text s -> s) (Str.full_split reg ver)
+
+    let compare_versionstrings s1 s2 =
+		let reg = Str.regexp "[^0-9]" in
+		compare (flatten_split reg s1) (flatten_split reg s2)
+        
+
+	let possibly_compare ~actual ~desired =
+		match desired with
+		| None -> 0
+		| Some v -> compare_versionstrings actual v
+end
+
+module Paths = struct
+	let rec search paths =
+		match paths with
+		| [] -> raise Not_found
+		| first :: rest ->
+			if Sys.file_exists first then
+				first
+			else
+				search rest
+end
+
+
+
+
+open Printf
+
+exception Incorrect_type of string
+exception Configuration_failure of string
+exception Incorrect_version of string * string * string option * string option
+exception Package_not_found of string * (string list)
+
+type param_value =
+	| StringList of string list
+	| String of string
+	| Bool of bool
+
+
+
+class ['a] configuration (ext:'a) = 
+    (* until the new stdlib is released *)
+    let hashtbl_size h = Hashtbl.fold (fun _ _ i -> i + 1) h 0 in
+object(self)
+    val mutable prefix = "/usr/local"
+    val mutable makefile = "Makefile"
+
+    val paths = Hashtbl.create 10
+    val findlibs = Hashtbl.create 10
+    val params = Hashtbl.create 10
+
+    method extension : 'a = failwith "No extension"
+                             
+    method set_prefix s = prefix <- s
+    method prefix = prefix
+
+    method makefile = makefile
+    method set_makefile m = makefile <- m
+
+    method findlib_version (name:string) = fst (Hashtbl.find findlibs name)
+    method findlib_path (name:string) = snd (Hashtbl.find findlibs name)
+    method add_findlib (name: string) (version:string) (path:string) =
+        Hashtbl.replace findlibs name (version, path)
+         
+    method add_path (key:string) (path:string) = Hashtbl.replace paths key path
+    method get_path (key:string) = Hashtbl.find paths key
+            
+    method set_param (key:string) value = Hashtbl.replace params key value
+    method get_param key = Hashtbl.find params key
+    method get_stringlist key =
+        match self # get_param key with
+	        | StringList sl -> sl
+	        | _ -> raise (Incorrect_type key)
+
+    method get_string key =
+        match self # get_param key with
+	        | String s -> s
+	        | _ -> raise (Incorrect_type key)
+
+    method get_bool key =
+        match self # get_param key with
+	        | Bool b -> b
+	        | _ -> raise (Incorrect_type key)
+
+
+    method summarize_globals =
+        sprintf "\tprefix: %s \n" prefix
+
+    method summarize_findlibs =
+        let sum lib (version, path) pre = 
+            sprintf "%s\t\t%s %s : %s\n" pre lib version path
+        in
+        Hashtbl.fold sum findlibs ""
+
+    method summarize_paths =
+        let sum key path pre = 
+            sprintf "%s\t\t%s : %s\n" pre key path
+        in
+        Hashtbl.fold sum paths ""
+    
+    method summarize_params =
+        let sum key value pre = 
+            sprintf "%s\t\t%s : %s\n" pre key 
+                (match value with
+                     | StringList sl -> String.concat " " sl
+                     | String s -> s
+                     | Bool b -> string_of_bool b)
+        in
+        Hashtbl.fold sum params ""
+
+    method summarize = 
+        sprintf "%s%s%s%s\n" self # summarize_globals
+            (if hashtbl_size findlibs > 0 then 
+                 sprintf "\n\tFindlib packages:\n%s" self # summarize_findlibs
+             else "")
+
+            (if hashtbl_size paths > 0 then
+                 sprintf "\n\tPaths:\n%s" self # summarize_paths 
+             else "")
+            
+            (if hashtbl_size params > 0 then
+                 sprintf "\n\tCompilation parameters:\n%s" self # summarize_params
+             else "")
+
+end
+
+
+class type ['a] configuration_item =
+object
+    method cmdline : (Arg.key * Arg.spec * Arg.doc) list 
+        (** This list are the comamnd line flags handled by it *)
+    method exec : 'a configuration -> unit
+end
+
+              
+class ['a] standard_configurator : ['a] configuration_item =
+object
+    method cmdline = []
+                         
+    method exec (conf: 'a configuration) = ()
+end
+
+
+class ['a] findlib_checker ?minversion ?maxversion ?(show = false) lib 
+    
+    : ['a] configuration_item =
+object
+    method cmdline = []
+    
+    method exec (conf : 'a configuration) =
+		Printf.printf "Checking for %s... %!" lib;
+        (* Note: intentionally let Findlib.No_such_package escape *)
+        let ver = Findlib.package_property [] lib "version" in
+		if	(0 > Versions.possibly_compare ver minversion) ||
+			(0 < Versions.possibly_compare ver maxversion) then
+			    raise (Incorrect_version (lib, ver, minversion, maxversion))
+		else (
+            conf # add_findlib lib ver (Findlib.package_directory lib);
+			printf "%s\n%!" ver
+        )
+end 
+
+class ['a] path_searcher ~key ?(doc = "") ?(show = true) defaultpaths =
+object
+    val mutable paths = defaultpaths
+
+    method cmdline = [("--" ^ key ^ "-path", Arg.String (fun x -> paths <- [x]), doc)]
+
+    method exec (conf : 'a configuration) = 
+		printf "Checking path to %s... " key;
+        try
+            let path = Paths.search paths in
+            printf "%s\n!" path;
+            conf # add_path key path
+        with
+            | Not_found -> raise (Package_not_found (key, paths))
+end
+
+
+class ['a] parameter_handler ?(doc = "") param defaultvalue =
+    let yes_no_default defvalue newvalue =
+	    match String.lowercase newvalue with
+	        | "true" | "t" | "yes" -> true
+	        | "false" | "f" | "no" | "off" -> false
+	        | _ -> defvalue (* This is a safe catch - it remains the default value *)
+    in
+    
+    let new_param_value oldvalue newvalue =
+	    match oldvalue with
+	        | String s -> String newvalue
+	        | Bool b -> Bool (yes_no_default b newvalue)
+	        | StringList _ -> StringList (Str.split (Str.regexp "[ \t]+") newvalue)
+    in
+
+object
+    val mutable value = defaultvalue
+    method cmdline = [( "--" ^ param,
+				       Arg.String (fun x -> value <- (new_param_value value x)),
+                       doc)]
+
+    method exec (conf : 'a configuration) = conf # set_param param value
+end
+
+
+let findlib_check ?min ?max name =
+    (new findlib_checker ?minversion:min ?maxversion:max name :> 'a configuration_item)
+
+let path_search ?(doc = "") name paths =
+    (new path_searcher ~key:name ~doc paths :> 'a configuration_item)
+        
+let param ?(doc = "") name value =
+    (new parameter_handler ~doc name value :> 'a configuration_item)
+
+
+
+class ['a] builtin_check_class =
+object
+        val mutable prefix = "/usr/local"
+        val mutable makefile = "Makefile"
+        
+        method cmdline = [("--prefix",
+                           Arg.String (fun s -> prefix <- s),
+                           "The director prefix of installation.");
+
+                          ("--makefile",
+                           Arg.String (fun s -> makefile <- s),
+                           "The name of the makefile to output.")]
+                             
+        method exec (conf : 'a configuration) =
+            conf # set_prefix prefix;
+            conf # set_makefile makefile
+end
+
+
+let configure_with 
+    ?(omit_builtin_checks = false) 
+    (configuration : 'a configuration) 
+    (conf_items : 'a configuration_item list)
+    =
+    
+    Findlib.init ();
+
+    (* Can't have one global thing, because the type system will infer it as
+       a [unit configuration_item] - which is correct, of course, if it is used by
+       [configure].:-) *)
+    let polymorphic_builtins = 
+        (new builtin_check_class :> 'a configuration_item)
+    in
+
+    let conf_items = (if omit_builtin_checks 
+                      then conf_items 
+                      else polymorphic_builtins :: conf_items)
+    in
+
+    let argspec = List.flatten (List.map (fun item -> item # cmdline) conf_items) in
+    
+    Arg.parse argspec
+		(fun s -> eprintf "[WARNING] Ignoring anonymous argument '%s'\n%!" s)
+		"./configure [options ...]";
+
+    try
+        List.iter (fun item -> item # exec configuration) conf_items
+	with
+		| Configuration_failure message ->
+			  printf "\nConfiguration failed: %s\n" message;
+			  exit 1
+                  
+		| Incorrect_version (key, actualver, minver, maxver) ->
+			  printf "\nIncorrect version of %s: %s\n" key actualver;
+			  (match minver with Some v -> printf "Minimum version: %s\n" v | _ -> ());
+			  (match maxver with Some v -> printf "Maximum version: %s\n" v | _ -> ());
+			  exit 1
+                  
+		| Package_not_found (key, paths) ->
+			  printf "\nCould not find %s: tried %s\n" key (String.concat ", " paths);
+			  exit 1
+
+        | Findlib.No_such_package (pack, s) ->
+              printf "\nFindlib doesn't know about package '%s' %s\n" pack s;
+              exit 1
+;;
+
+
+(* The user-visible function *)
+let configure ?(omit_builtin_checks = false) conf_items =
+    let conf = new configuration () in
+    configure_with ~omit_builtin_checks conf conf_items;
+    conf
+
+
+
+
+(* Functions for extracting the contents of the configuration *)
+(*
+let conf_value conf name = StringMap.find name conf
+*)
+
+(*let output_config_file conf filename =
+	let outchan = open_out filename in
+
+	StringMap.iter
+		(fun name value ->
+			match value with
+			| Bool b -> fprintf outchan "let %s = %B" name b
+			| String s -> fprintf outchan "let %s = \"%s\"" name s
+			| StringList sl -> fprintf outchan "let %s = [\"%s\"]" name (String.concat "\"; \"" sl)
+			)
+		conf;
+	close_out outchan
+;;
+*)
+
+
+;;
+
+end
+module AutoMake : sig
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+(** A module for generating makefiles for ocaml projects.  It mostly contains shortcut
+  functions in {!Product} and {!Package} modules.
+  
+  
+  The important targets provided by the generated makefile are:
+  all, byte, opt, doc, install, install-opt, clean, distclean, tar, bzip2, gzip 
+  
+  Planned targets: rpm, deb *)
+
+(** {6 Shortcuts} *)
+
+(**
+  Every value here is a "shortcut" for the functions in the {!Package} module, which
+  in turn are shortcuts for items in the {!Product} module. 
+
+  The functions in tho {!Package} module require you to supply data structures from the
+  {!Sources} and {!Libs} modules and these just take lists of strings and handle them
+  for you.
+*)
+
+(** See {!Package.library} *)
+val library :
+    ?sources:string list ->
+    ?libs:string list ->
+    ?findlibs:string list ->
+    ?shared:bool ->
+    ?dest:Product.destination ->
+    string -> 
+    Package.product
+
+(** See {!AutoMake.library} *)
+val executable :
+    ?sources:string list ->
+    ?libs:string list ->
+    ?findlibs:string list ->
+    ?dest:Product.destination ->
+    string -> 
+    Package.product
+
+(** See {!AutoMake.library} *)
+val toplevel :
+    ?sources:string list ->
+    ?libs:string list ->
+    ?findlibs:string list ->
+    ?dest:Product.destination ->
+    string -> 
+    Package.product
+
+(** See {!AutoMake.library} *)
+val documentation :
+    ?sources:string list -> 
+    ?findlibs:string list ->
+    string -> 
+    Package.product
+
+(** See {!AutoMake.library} *)
+val script :
+    ?dest:Product.destination ->
+    string ->
+    Package.product
+
+
+(** 
+  This class type indicates the only information AutoMake needs from a configuration.
+  It is necessary to cast you [Conf.configuration] object to this type before passing it
+  to [AutoMake.output_makefile] or other [AutoMake] functions, to erase its
+  polymorphism.
+*)
+class type configuration = object
+    method makefile : string
+    method prefix : string
+end
+              
+(** Creates a package that is ready for automaking.  This is a shortcut for {!Package.create},
+  pretty much.  I leave it here because it is very concise (and I already wrote it before the
+  [Package] module even existed *)
+
+val package :
+	?package : string ->
+    ?version : string ->
+    ?destdir : string ->
+    ?sources : string list ->
+    ?findlibs : string list ->
+    ?libs : string list ->
+    ?includes : string list ->
+    ?findlib_package : string ->
+    ?findlib_installed_files : string list ->
+    ?findlib_installs_opt : bool ->
+    ?flags : (CmdLineTools.predicate list * CmdLineTools.flags) list ->
+    ?cleaned : string list ->
+	?debug:bool -> 
+	Package.product list -> 
+    Package.t
+
+(** {6 Automatically generating a makefile} *)
+
+(** Outputs a makefile for any {!Package.t}.  If a {!Conf.configuration} is not provided,
+  then a stripped-down configuration is run. *)
+val output_makefile : 
+    ?configuration : configuration ->
+    Package.t -> 
+    unit
+
+(** Outputs a very simple META file.  I'm not an expert on the full capabilities of
+  findlib, so this doesn't try to work any crazy magic *)
+val output_meta : 
+    ?configuration : configuration -> 
+    Package.t -> 
+    unit
+
+(*val output_ebuild : ?filename : string -> autopackage -> unit
+val output_omakefile : ?filename : string -> autopackage -> unit*)
+end
+= struct
+
+(*
+  This file is part of ocamlconf - An O'Caml build tool
+  Copyright (C) 2003 Kenneth Knowles
+  
+  ocamlconf is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  ocamlconf is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+  
+  You should have received a copy of the GNU General Public License
+  along with ocamlconf; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*)
+
+
+open Printf;;
+
+module Makefile = struct
+    (* A simple representation of our makefile - we will use no extended features *)
+    type var = string * string (* name, value *)
+    type rule = string * string * string (* name, deps, action *)
+    type makefile = (var list) * (rule list)
+
+
+    let max_width = 60
+
+    let indent indentation str =
+        (Str.global_replace (Str.regexp "^") indentation (Util.chomp_eol str)) ^ "\n"
+        
+    let rec pretty_concat ?(width = 80) ?(len = 0) ?(str = "") filelist =
+	    match filelist with
+	        | [] -> str
+	        | file::rest ->
+		          if len > width then
+			          pretty_concat ~len:(String.length file) ~width ~str:(str ^ "\\\n\t" ^ file ^ " ") rest
+		          else
+			          pretty_concat ~len:(len + (String.length file)) ~width ~str:(str ^ file ^ " ") rest
+
+    let pretty_varvalue name value =
+	    if name = "" then sprintf "%s\n" value else (
+	        if (String.length name) + (String.length value) + 3 > max_width then
+		        sprintf "%s = \\\n\t%s\n" 
+			        name
+			        (pretty_concat ~width:max_width (Str.split (Str.regexp "[ \t\n]+") value))
+	        else
+		        sprintf "%s = %s\n" name value )
+
+    let render ?(channel = stdout) vars deps =
+	    List.iter 
+		    (fun (name,value) -> output_string channel (pretty_varvalue name value))
+		    vars;
+
+	    output_string channel "\n";
+
+	    List.iter 
+		    (fun (name,deps,action) -> 
+                 if name <> "" then
+			         fprintf channel 
+                         "%s: %s\n%s\n" name deps (if action <> "" then indent "\t" action else ""))
+                         
+		    deps
+
+end
+
+module Install = struct
+
+    let dest_dir = function	
+	    | `bin -> "$(PREFIX_DESTDIR)/bin"
+	    | `lib -> "$(PREFIX_DESTDIR)lib"
+        | `other s -> s
+	    | `nowhere 
+        | `findlib -> raise (Invalid_argument "dest_dir")
+              
+    let ensure_dir dest =
+        sprintf "install -d %s" dest
+            
+    let install ~dest ~mode name =
+        let destination = dest_dir dest in
+        (ensure_dir destination) ^ "\n" ^
+	    sprintf "install -m %i %s %s/%s" mode name destination name
+            
+    let uninstall ~dest name =
+        let destination = dest_dir dest in
+        sprintf "rm -f %s/%s" destination name
+            
+end
+
+
+
+type global_target = [ `all | `opt | `byte | `doc | `top | `dep |
+                           `clean | `install | `install_opt | `uninstall | `findlib]
+        
+class type make_builder = object
+    method globals : global_target -> string list
+    method vars : Makefile.var list
+    method rules : Makefile.rule list
+end
+
+
+
+
+(* This module pretty much contains a bunch of classes that inherit from the
+   global Product modules *)
+              
+open Util
+
+let variable product name value = sprintf "%s_%s" product#name name, value
+
+let source_vars product = [variable product "SOURCES" (join (product # sources))]
+
+let byte_vars product = 
+    [ 
+		variable product "OBJECTS" (join (product # byte_objects));
+        variable product "LIBS" (join (product # byte_libs));
+		variable product "O_OBJECTS" (join (product # obj_objects));
+    ]
+    
+let opt_vars product =
+    [
+        variable product "OPT_OBJECTS" (join (product # opt_objects));
+        variable product "OPT_LIBS" (join (product # opt_libs));
+    ]
+    
+let findlib_vars product = [variable product "FINDLIBS" (join (product # findlibs))]
+
+class installer
+    ?(findlib_installs_opt = false)
+    ?(install_opt_name : string option)
+    ?(opt = [])
+    ?(byte = [])
+    ~dest
+    install_name
+    =
+    let uninstall_name = "un" ^ install_name in
+    let opt_names = List.map fst opt in
+    let byte_names = List.map fst byte in
+object(self)
+    method globals (which : global_target) =
+        if dest = `nowhere then
+            []
+        else
+            match which with
+                | `install -> if dest <> `findlib then [install_name] else []
+                      
+                | `install_opt -> 
+                      (match dest, install_opt_name with
+                           | _, None
+                           | `findlib, _ -> []
+                           | _, Some s -> [s])
+                      
+                | `uninstall ->  (* Almost an "if" but it could expand *)
+                      (match dest, install_opt_name with
+                           | `findlib, _ -> []
+                           | _, _ -> [uninstall_name])
+                      
+                | `findlib ->
+                      (match dest, findlib_installs_opt with
+                           | `findlib, false -> byte_names
+                           | `findlib, true -> byte_names @ opt_names
+                           | _, _ -> [])
+                      
+                | _ -> failwith "Invalid global passed to installer"
+                                
+    method rules =
+        let install_rule (file, mode) = Install.install ~dest ~mode file in
+        let uninstall_rule (file,_) = Install.uninstall ~dest file in
+        
+        match dest with
+            | `nowhere | `findlib -> []
+            | _ ->
+                  [
+                      install_name,
+                      join byte_names,
+                      join ~delim:"\n" (List.map install_rule byte)
+                  ]
+                  @
+                  [
+                      (uninstall_name,
+                       "",
+                       join ~delim:"\n" (List.map uninstall_rule (byte @ opt)))
+                  ]
+                  @
+                  (match install_opt_name with
+                       | None -> []
+                       | Some opt_install ->
+                             [
+                                 opt_install,
+                                 join opt_names,
+                                 join ~delim:"\n" (List.map install_rule opt)
+                             ])
+                  
+end
+        
+class script_builder script =
+    let installer = new installer
+                        ~dest:(script # destination)
+                        ~byte:[script # name, 755] 
+                        ("install-" ^ script # name)
+    in
+object(self)
+    method globals (which : global_target) =
+        match which with
+            | `install | `uninstall | `findlib | `install_opt -> installer # globals which
+            
+            | _ -> []
+                  
+    method vars = ([] : Makefile.var list)
+    method rules = installer # rules
+end
+
+    
+class executable_builder executable =
+    let installer =
+        new installer
+            ~dest:(executable # destination)
+            ~install_opt_name:("install-" ^ executable # opt_name)
+            ~opt:[executable # opt_name, 755]
+            ~byte:[executable # name, 755]
+            ("install-" ^ executable # name)
+    in
+object(self)
+    method globals (which : global_target)=
+        match which with
+            | `install
+            | `install_opt
+            | `uninstall
+            | `findlib -> installer # globals which
+                  
+            | `dep -> executable # sources
+            | `all | `byte -> [executable # name]
+            | `opt -> [executable # opt_name]
+
+            | `clean -> 
+                  [executable # name; 
+                   executable # opt_name] 
+                  @ (executable # cleaned)
+
+            | `doc | `top -> []
+                  
+    method vars = (source_vars executable) @ (byte_vars executable) 
+                  @ (opt_vars executable) @ (findlib_vars executable)
+                      
+    method rules =
+        let name = executable # name in
+        [
+		    (name,
+             sprintf "$(OBJECTS) $(O_OBJECTS) $(%s_OBJECTS) $(%s_O_OBJECTS)" name name,
+			 sprintf "$(LINK_BYTE) $(%s_FINDLIBS) $(%s_LIBS) -o $@ $(O_OBJECTS) \
+                                  $(OBJECTS) $(%s_O_OBJECTS) $(%s_OBJECTS)" 
+				 name name name name);
+            
+		    (executable # opt_name,
+             sprintf "$(OPT_OBJECTS) $(O_OBJECTS) $(%s_OPT_OBJECTS) $(%s_O_OBJECTS)" name name,
+			 sprintf "$(LINK_NATIVE) $(%s_FINDLIBS) $(%s_OPT_LIBS) -o $@ \
+                            $(O_OBJECTS) $(OPT_OBJECTS) $(%s_O_OBJECTS) $(%s_OPT_OBJECTS)"
+				 name name name name);
+        ]
+        @
+        (installer # rules)
+	        
+end
+
+class toplevel_builder toplevel =
+    let installer = new installer
+                        ~dest:(toplevel # destination)
+                        ~byte:[toplevel # name, 755]
+                        ("install-" ^ toplevel # name)
+    in
+object(self)
+    method globals (which : global_target) =
+        match which with
+            | `findlib | `install_opt | `install | `uninstall -> installer # globals which
+
+            | `dep -> toplevel # sources
+            | `top -> [toplevel # name]
+            | `clean -> [toplevel # name] @ (toplevel # cleaned)
+            | `all | `opt | `byte | `doc -> []
+
+    method vars = (byte_vars toplevel) @ (findlib_vars toplevel) @ (source_vars toplevel)
+                      
+    method rules =
+        let name = toplevel # name in
+        [
+		    (name,
+             sprintf "$(OBJECTS) $(O_OBJECTS) $(%s_OBJECTS) $(%s_O_OBJECTS)" name name,
+			 sprintf "$(LINK_TOP) $(%s_FINDLIBS) $(%s_LIBS) -o $@ $(OBJECTS) \
+                                  $(O_OBJECTS) $(%s_OBJECTS) $(%s_O_OBJECTS)" 
+				 name name name name);
+        ]
+        @ 
+        (installer # rules)
+	        
+end
+    
+class documentation_builder docs =
+object(self)
+    method globals (which : global_target) = 
+        match which with
+            | `dep -> docs # sources
+            | `doc -> [docs # name ^ ".html"]
+            | `clean -> []
+            | `opt | `all | `byte | `top | `install | `uninstall | `findlib | `install_opt -> []
+                  
+    method vars = (source_vars docs) @ (findlib_vars docs)
+
+    method rules =
+        List.map
+            (fun (needs_dir, id, flags) ->
+                 let name = docs # name in
+                 let docname = name ^ "." ^ id in
+                 let mkdir = if needs_dir then sprintf "mkdir -p %s &&" docname else "" in
+                 let cmd = sprintf "$(DOC_%s) $(%s_FINDLIBS) %s %s" 
+                               (String.uppercase id) name
+                               flags 
+                               docname 
+                 in
+			     (docname,
+                  sprintf "$(SOURCES) $(%s_SOURCES)" name,
+			      sprintf "%s %s $(SOURCES) $(%s_SOURCES)"
+				      mkdir cmd name ))
+            [
+                true, "html", "-d";
+                true, "man", "-d";
+                false, "texi", "-o";
+                false, "dot", "-o";
+                false, "latex", "-o";
+            ]
+end
+
+class library_builder library =
+    (* hack alert *)
+    let c_a_rule =
+        (library # c_a_name,
+         sprintf "$(O_OBJECTS) $(%s_O_OBJECTS)" library # name,
+         sprintf "$(LINKLIB_STATIC) $@ $(O_OBJECTS) $(%s_O_OBJECTS)" library # name) in
+
+    let c_so_rule =
+        (library # c_so_name,
+         sprintf "$(O_OBJECTS) $(%s_O_OBJECTS)" library # name,
+         sprintf "$(LINKLIB_SHARED) -o $@ $(O_OBJECTS) $(%s_O_OBJECTS)" library # name) in
+    
+    let cma_install, cmxa_install, cmxa_a_install, c_a_install, c_so_install =
+        (library # cma_name, 644),
+        (library # cmxa_name, 644),
+        (library # cmxa_a_name, 755),
+        (library # c_a_name, 755),
+        (library # c_so_name, 755)
+    in
+
+    let installer = new installer
+                        ~dest:(library # destination)
+                        ~install_opt_name:("install-" ^ library # cmxa_name)
+                        ~byte:(match library # has_c_sources, library # shared with
+                                   | false, _ -> [cma_install]
+                                   | true, false -> [cma_install; c_a_install]
+                                   | true, true -> [cma_install; c_a_install; c_so_install])
+                        ~opt:(if library # has_c_sources then 
+                                  [cmxa_install; cmxa_a_install; c_a_install] 
+                              else 
+                                  [cmxa_install; cmxa_a_install])
+                        ("install-" ^ library # cma_name)
+    in
+    let name = library # name in
+object(self)
+
+    method c_vars =
+        [
+            variable library "C_STATIC_LIBS" (sprintf "-cclib -l%s" name);
+            variable library "C_SHARED_LIBS" (sprintf "-cclib -l%s -dllib -l%s" name name);
+        ]
+        
+
+    val cma_rule =
+        let cma_c_flags = 
+            match library # has_c_sources, library # shared with
+                | false, _ -> ""
+                | true, false -> sprintf " $(%s_C_STATIC_LIBS)" name
+                | true, true -> sprintf " $(%s_C_SHARED_LIBS)" name 
+        in
+		(library # cma_name,
+         sprintf "$(OBJECTS) $(%s_OBJECTS) %s" library#name (join library#cma_c_deps),
+		 sprintf "$(LINKLIB_BYTE) $(%s_FINDLIBS) %s $(%s_LIBS) -o $@ \
+                              $(OBJECTS) $(%s_OBJECTS)" 
+			 name cma_c_flags name name)
+        
+    val cmxa_rule =
+        let cmxa_c_flags = 
+            if library # has_c_sources then sprintf "$(%s_C_STATIC_LIBS)" name else "" 
+        in
+        (library # cmxa_name,
+         sprintf "$(OPT_OBJECTS) $(%s_OPT_OBJECTS) %s" name (join library#cmxa_c_deps),
+		 sprintf "$(LINKLIB_NATIVE) $(%s_FINDLIBS) %s $(%s_OPT_LIBS) -o $@ \
+                            $(OPT_OBJECTS) $(%s_OPT_OBJECTS)"
+			 name cmxa_c_flags name name)
+
+    method globals (which : global_target) : string list =
+        match which with
+            | `install | `install_opt | `findlib | `uninstall -> installer # globals which
+
+            | `dep -> library # sources
+            | `all -> [library # cma_name]
+            | `opt -> [library # cmxa_name]
+            | `byte -> [library # cma_name]
+            | `clean -> [library # cma_name; 
+                         library # cmxa_name;
+                         library # cmxa_a_name;
+                         library # c_so_name;
+                         library # c_a_name] @ (library # cleaned)
+                  
+            | `doc | `top -> []
+                  
+    method vars = 
+        (source_vars library) @ (byte_vars library) @ (opt_vars library) @ (findlib_vars library) @
+        (if library # has_c_sources then self # c_vars else [])
+        
+    method rules =
+        (match library # has_c_sources, library # shared with
+             | false, _ -> [cma_rule; cmxa_rule]
+             | true, false -> [cma_rule; cmxa_rule; c_a_rule]
+             | true, true -> [cma_rule; cmxa_rule; c_a_rule; c_so_rule])
+        @
+        (installer # rules)
+end
+
+
+
+(* * * Makefile Variables * * *)
+    
+(* Really snappy wrappers *)
+let library ?(sources = []) ?(libs = []) ?findlibs ?shared ?dest name = 
+    Package.library
+        ~sources:(Sources.of_list sources)
+        ~libs:(Libs.of_list libs)
+        ?findlibs 
+        ?shared 
+        ?dest 
+        name
+    
+let executable ?(sources = []) ?(libs = []) ?findlibs ?dest name =
+    Package.executable
+        ~sources:(Sources.of_list sources)
+        ~libs:(Libs.of_list libs)
+        ?findlibs
+        ?dest
+        name
+    
+let script ?dest name = 
+    Package.script
+        ?dest 
+        name
+    
+let toplevel ?(sources = []) ?(libs = []) ?findlibs ?dest name = 
+    Package.toplevel
+        ~sources:(Sources.of_list sources)
+        ~libs:(Libs.of_list libs)
+        ?findlibs
+        ?dest
+        name
+
+let documentation ?(sources = []) ?findlibs name =
+    Package.documentation
+        ~sources:(Sources.of_list sources)
+        ?findlibs
+        name
+
+let builder_of_packaged_product (product : Package.product) : make_builder =
+    match product with
+        | `library l -> (new library_builder l :> make_builder)
+        | `executable e -> (new executable_builder e :> make_builder)
+        | `toplevel t -> (new toplevel_builder t :> make_builder)
+        | `documentation d -> (new documentation_builder d :> make_builder)
+        | `script s -> (new script_builder s :> make_builder)
+
+
+
+
+open Package
+class global_builder package configuration =
+    let sub_builders = List.map builder_of_packaged_product package.products in
+    let global_pattern_targets = [
+	    ("%.ml", "%.mll", "$(PRECOMP_LEX) $<");
+	    ("%.ml", "%.mly", "$(PRECOMP_YACC $<");
+	    ("%.mli", "%.mly", "$(PRECOMP_YACC $<");
+	    ("%.cmi", "%.mli", "$(COMPILE_BYTE) -o $@ $<");
+	    ("%.cmi", "%.ml", "$(COMPILE_BYTE) -o $@ $<");
+	    ("%.cmo", "%.ml", "$(COMPILE_BYTE) -o $@ $<");
+	    ("%.cmx", "%.ml", "$(COMPILE_NATIVE) -o $@ $<");
+	    ("%.o", "%.c", "$(COMPILE_C) -o $@ $<");
+    ]
+    in
+object(self)
+    
+    method globals (which : global_target) =
+        match which with
+            | `dep ->
+		          (Sources.all package.sources)
+                  @
+		          (List.flatten (List.map 
+                                     (fun x -> (x # globals `dep)) 
+                                     sub_builders))
+
+            | _ -> failwith "global builder does not answer globals queries other than `dep"
+                       
+    method vars =
+        let ocamlfind_version preds command =
+            match command with
+                | "ocamlc" | "ocamlcp" | "ocamlopt"
+                | "ocamldep" | "ocamldoc"
+                | "ocamlmktop"
+                    ->
+                      let link = 
+                          if List.mem `link preds && not (List.mem `native preds 
+                                                          && List.mem `lib preds)
+                          then " -linkpkg" else "" 
+                      in
+                      "ocamlfind " ^ command ^ " $(FINDLIBS)" ^ link
+                          
+                | _ -> command
+        in
+        let cmdline_from_db cmdline preds =
+            let (preds,cmd,flags) = CmdLineTools.get cmdline preds in
+            (ocamlfind_version preds cmd) ^ " " ^ (join flags)
+        in
+
+        (* TODO: make it so the "addition" variable is taken care of by manipulating the
+           command line database *)
+        let cmdlinetool_vars cmdline =
+            let cmdline =
+                CmdLineTools.append_list cmdline [
+                    [`compile; `ml], ["$(INCLUDES)"];
+                    [`precompile], ["$(INCLUDES)"];
+                    [`link; `byte], ["$(INCLUDES) $(LIBS)"];
+                    [`link; `prof], ["$(INCLUDES) $(LIBS)"];
+                    [`link; `native], ["$(INCLUDES) $(OPT_LIBS)"];
+                    [`document], ["$(INCLUDES)"]
+                ]
+            in
+
+            List.map
+                (fun (varname, preds) -> 
+                     varname, cmdline_from_db cmdline preds)
+                [
+                    "COMPILE_BYTE", [`compile; `ml; `byte];
+                    "COMPILE_NATIVE", [`compile; `ml; `native];
+                    "COMPILE_PROF", [`compile; `ml; `prof];
+
+                    "COMPILE_C", [`compile; `c];
+
+                    "PRECOMP_YACC", [`precompile; `mly];
+                    "PRECOMP_LEX", [`precompile; `mll];
+
+                    "LINK_BYTE", [`link; `exe; `byte];
+                    "LINK_NATIVE", [`link; `exe; `native];
+                    "LINK_PROF", [`link; `exe; `prof];
+
+                    "LINKLIB_BYTE", [`link; `lib; `byte];
+                    "LINKLIB_NATIVE", [`link; `lib; `native];
+                    "LINKLIB_PROF", [`link; `lib; `prof];
+
+                    "LINKLIB_SHARED", [`link; `lib; `c; `shared];
+                    "LINKLIB_STATIC", [`link; `lib; `c; `static];
+
+                    "LINK_TOP", [`link; `top; `byte];
+                    
+                    "DOC_HTML", [`document; `html];
+                    "DOC_TEXI", [`document; `texi];
+                    "DOC_LATEX", [`document; `latex];
+                    "DOC_DOT", [`document; `dot];
+                    "DOC_MAN", [`document; `man];
+                ]
+        in
+
+
+        let product_findlib_files = List.flatten (List.map
+                                                      (fun builder -> builder # globals `findlib)
+                                                      sub_builders)
+        in
+        
+        [
+            
+	        (* installation info *)
+	        "PACKAGE", package.package;
+            "FINDLIB_PACKAGE", package.findlib_package;
+            "DESTDIR", package.destdir;
+	        "PREFIX", configuration # prefix; 
+
+            (* These are shorthand *)
+            "PREFIX_DESTDIR", "$(DESTDIR)$(PREFIX)";
+	        "FINDLIB_FILES", join (package.findlib_installed_files @ product_findlib_files);
+            
+	        (* file info *)
+	        "SOURCES", join (Sources.get package.sources [`ml; `mli; `mly; `mll; `c]);
+	        "OBJECTS", join (Sources.get package.sources [`cmo]);
+            "INTERFACES", join (Sources.get package.sources [`cmi]);
+	        "OPT_OBJECTS", join (Sources.get package.sources [`cmx]);
+	        "O_OBJECTS", join (Sources.get package.sources [`o]);
+	        "LIBS", join package.libs.Libs.cma;
+	        "OPT_LIBS", join package.libs.Libs.cmxa;
+	        
+            "FINDLIBS", 
+            if package.findlibs = [] 
+            then "" 
+            else sprintf "-package '%s'" (join package.findlibs);
+	        
+            "INCLUDES", 
+            if package.includes <> [] then "-I " ^ (join ~delim:" -I " package.includes) else "";
+	    ]   
+        @
+        (cmdlinetool_vars package.command_line)
+        @
+        (List.flatten (List.map (fun builder -> builder # vars) sub_builders))
+
+    method distrib_rules =
+        let distrib_rule label target flag extension =
+		    let filename = Printf.sprintf "%s.tar%s" label extension in
+            let exclusions =
+                (String.concat " " 
+                     (List.map (fun s -> sprintf "--exclude='%s'" s) 
+                          [ "*~"; 
+                            "CVS";
+                            "_darcs"; 
+                            ".arch*";
+                            "*/" ^ label;
+                            filename ]))
+            in
+		    let tarflags = exclusions ^ " " ^ flag in
+		    
+		    (target, 
+             "", 
+		     Printf.sprintf "$(MAKE) distclean && ln -s . %s && tar %s -chvf %s %s && rm %s"
+			     label tarflags filename label label)
+        in
+	    let label = package.package ^ "-" ^ package.version in
+	    
+	    List.map
+            (fun (target, flag, extension) -> distrib_rule label target flag extension)
+		    [
+                ("gzip", "-z", ".gz");
+                ("bzip2", "-j", ".bz2");
+                ("tar", "", "")
+            ]
+    
+    method append_ocamldep outchannel =
+	    let all_sources = self # globals `dep in
+        
+	    let inchannel = Unix.open_process_in 
+		                    (sprintf "ocamldep %s %s"
+                                 
+			                     (if package.includes <> [] 
+                                  then "-I " ^ (join ~delim:" -I " package.includes) 
+                                  else "")
+                                 
+			                     (join all_sources))
+                            
+	    in
+        (try
+	         while true do
+                 fprintf outchannel "%s\n" (input_line inchannel)
+	         done
+         with End_of_file -> ());
+        
+	    close_in inchannel
+
+
+            
+
+    method rules =
+        let lexer_rule file = (new_ext file ".ml"), file, "" in
+        
+        (* TODO: make the Makefile depend on the .mly and .mll files, so it'll be
+           re-created when they change - and then run yacc and lex at configure time *)
+        let parser_rules file = 
+            [
+	            (new_ext file ".cmo"), (new_ext file ".cmi"), "";
+	            (new_ext file ".cmx"), (new_ext file ".cmi"), ""
+            ] 
+        in
+        
+        let precompile_rules sources =
+	        (List.map lexer_rule (Sources.get sources [`mll]))
+            @
+	        (List.flatten (List.map parser_rules (Sources.get sources [`mly])))
+        in
+        
+        let get_all_globals global_tag = 
+            join (List.flatten (List.map 
+                                    (fun builder -> builder # globals global_tag) 
+                                    sub_builders))
+        in
+        
+        (List.map (fun (name, tag) -> name, get_all_globals tag, "")
+             [
+		         ("all", `all);
+                 ("byte", `byte);
+		         ("opt", `opt);
+		         ("doc", `doc);
+                 ("top", `top);
+             ])
+        @
+        [
+            ("install", 
+             "install-findlib " ^ (get_all_globals `install),
+             "");
+            
+            ("uninstall", "uninstall-findlib " ^ (get_all_globals `uninstall), "");
+            ("reinstall", "uninstall", "$(MAKE) install");
+            ("install-opt", get_all_globals `install_opt, "");
+		    ("clean", "", "rm -rf $(OBJECTS) $(INTERFACES) $(O_OBJECTS) $(OPT_OBJECTS) " 
+                 ^ (get_all_globals `clean) 
+                 ^ " " ^ (join package.cleaned)
+            );
+		    ("distclean", "", "$(MAKE) clean && rm -f Makefile");
+            
+            if (get_all_globals `findlib) = "" then
+                ("install-findlib", "", "")
+            else
+                ("install-findlib",
+                 "$(FINDLIB_FILES)",
+                 "ocamlfind install $(FINDLIB_PACKAGE) META $(FINDLIB_FILES)");
+
+            if (get_all_globals `findlib) = "" then
+                ("uninstall-findlib", "", "")
+            else
+                ("uninstall-findlib",
+                 "",
+                 "ocamlfind remove $(FINDLIB_PACKAGE)");
+	    ]
+        @
+        (List.flatten (List.map (fun builder -> builder # rules) sub_builders))
+        @
+        global_pattern_targets
+        @
+        (precompile_rules package.sources)
+        @
+        (self # distrib_rules)
+        
+            
+end
+
+class type configuration = object
+    method makefile : string
+    method prefix : string
+end
+
+
+let package 
+    ?(package = "my_program")
+	?(version = "0.0")
+    ?(destdir = "")
+	?(sources = [])
+	?(findlibs = [])
+	?(libs = [])
+	?(includes = [])
+    ?(findlib_package = package)
+	?(findlib_installed_files = [])
+	?(findlib_installs_opt = true)
+	?(flags = [])
+    ?(cleaned = [])
+	?(debug = false)
+	products =
+
+    Package.create
+        ~sources:(Sources.of_list sources)
+        ~libs:(Libs.of_list libs)
+        ~command_line:(CmdLineTools.append_list CmdLineTools.starting_database flags)
+        ~package 
+        ~version 
+        ~destdir 
+        ~findlibs 
+        ~includes
+        ~findlib_package 
+        ~findlib_installed_files 
+        ~findlib_installs_opt 
+        ~cleaned
+        ~debug
+        products
+    
+let output_makefile
+    ?(configuration = (Conf.configure [] :> configuration))
+	package 
+    =
+	
+    (* * * Makefile * * *)
+	let channel = if package.debug then stdout else open_out (configuration # makefile) in
+    
+    let p = new global_builder package configuration in
+
+	Makefile.render 
+        ~channel 
+        p # vars
+        p # rules;
+	
+    p # append_ocamldep channel;
+    
+	if not package.debug then close_out channel
+        
+
+
+let get_findlibs p =
+    match p with
+        | `executable e -> e # findlibs
+        | `library l -> l # findlibs
+        | `documentation d -> d # findlibs
+        | `script s -> []
+        | `toplevel t -> t # findlibs
+              
+let output_meta
+    ?(configuration = (Conf.configure [] :> configuration))
+    package
+    =
+    let channel = if package.debug then stdout else open_out "META" in
+    
+    fprintf channel "# Specifications for %s\n" package.findlib_package;
+    
+    let product_findlibs = List.map (fun p -> (get_findlibs p)) package.products in
+    
+    let all_findlibs = Util.unique (List.flatten (package.findlibs :: product_findlibs)) in
+    
+    fprintf channel "requires = \"%s\"\n" (String.concat " " all_findlibs);
+    fprintf channel "version = \"%s\"\n" package.version;
+
+    let libs = List.fold_left (fun liblist p -> 
+                                   match p with 
+                                       | `library l -> l::liblist
+                                       | _ -> liblist)
+                   []
+                   package.products
+    in
+     
+    fprintf channel "archive(byte) = \"%s\"\n" (String.concat " " 
+                                                    (List.map (fun l -> l # cma_name) libs));
+    
+    (* TODO: interact more intelligently with findlib predicates - possible use their
+       META handling code *)
+    fprintf channel "archive(native) = \"%s\"\n" (String.concat " " 
+                                                   (List.map (fun l -> l # cmxa_name) libs))
+        
+(*if CmdLineTools.flags package.command_line `ocamlc <> "" then (
+        fprintf channel "linkopts = \"%s\"" (CmdLineTools.flags package.commandline `ocamlc)*)
+    
+
+let output_ebuild ?filename package = ()
+(*let output_meta ?(filename = "META") package = ()*)
+let output_omakefile ?(filename = "OMakeFile") package = ()
+
+
+        
+
+(***************************************************************************************)
+end
+open Conf;;
+open Util;;
+
+type aspcc_module = {
+    name : string;
+    findlibs : string list;
+    desc : string;
+}
+
+let available_modules = [
+	{ name = "VbPervasives";
+      findlibs = ["unix"; "netstring"];
+      desc = "The documented standard VbScript functions." };
+    
+    { name = "aspIntrinsics";
+      findlibs = ["netstring"];
+      desc = "The intrinsic ASP objects minus session - currenlty uses CGI environment" };
+
+    { name = "regexp";
+      findlibs = ["pcre"];
+      desc = "The RegExp object" };
+
+    { name = "session_persil";
+      findlibs = ["mysql"];
+      desc = "The Session and Application ASP objects, implemented with PersiL" };
+
+    { name = "session_perl";
+      findlibs = ["perl"];
+      desc = "The Session and Application ASP objects, with perl's Apache::Session" };
+
+    { name = "session_hack";
+      findlibs = ["unix"];
+      desc = "The Session and Application APS objects, hacked with temp files" };
+
+    { name = "wscript";
+      findlibs = ["unix"];
+      desc = "Compatability with Wscript, for accessing Argv, etc" };
+    
+	{ name = "scripting";
+      findlibs = ["unix"]; 
+      desc = "Contains only the dictionary object." };
+   
+    { name = "tools";
+      findlibs = [];
+      desc = "The MSWC Tools object." };
+
+    { name = "browsertype";
+      findlibs = [];
+      desc = "The MSWC BrowserType object" };
+ 
+	{ name = "msXml_gdome2";
+      findlibs = ["gdome2"];
+      desc = "A wrapper on gdome2 compatible with MSXML. (incomplete)" };
+    
+	{ name = "msXml_pxp";
+      findlibs = ["pxp"];
+      desc = "A wrapper on pxp compatible with pxp. (broken)" };
+    
+	{ name = "ado";
+      findlibs = ["freetds"; "dbi"];
+      desc = "An ADO implementation on top of ocamldbi." }
+]
+;;
+
+let default_modules = [
+    "VbPervasives";
+    "scripting"; 
+    "aspIntrinsics"; 
+    "ado"; 
+    "wscript";
+    "tools";
+    "session_hack";
+    "regexp";
+    "browsertype";
+]
+;;
+
+let spec =
+	 [
+		 param "modules"
+			    (StringList default_modules)
+                ~doc:(
+                    "\n\t\t\
+                    Space-separated (must quote it!) list of modules to include - compile time only =(\n\t\t\
+	    		   	Defaults to: '" ^ (String.concat " " default_modules) ^ "' \n\t\t\
+		    	    Available:\n\t\t" ^
+				       (String.concat "\n\t\t" 
+                              (List.map 
+					              (fun x -> Printf.sprintf "%s\t%s" x.name x.desc)
+					                available_modules)) ^ "\n\n")
+
+	]
+;;
+
+(* Dealing with which modules were selected *)
+module StringMap = Map.Make(String)
+
+let module_conf = Conf.configure spec
+
+let selected_modules =
+    let module_names = (module_conf # get_stringlist "modules") in
+    List.filter (fun x -> List.mem x.name module_names) available_modules
+
+let module_filename aspcc_mod =
+    "runtime/modules/" ^ aspcc_mod.name ^ ".ml"
+
+let unique li =
+    let rec unique_r ?(so_far = []) li =
+        match li with
+            | [] -> List.rev so_far
+            | entry :: rest ->
+                  if List.mem entry rest then
+                      unique_r ~so_far rest
+                  else
+                      unique_r ~so_far:(entry :: so_far) rest
+    in
+    unique_r li
+
+let findlib_names =
+    ["str"; "netstring"; "pcre"] 
+    @ (List.flatten (List.map 
+                         (fun x -> x.findlibs) 
+                         selected_modules)) 
+
+let all_findlibs =
+    List.map
+        (fun libname -> Conf.findlib_check libname)
+        (unique findlib_names)
+
+let findlib_conf = Conf.configure all_findlibs
+
+open AutoMake;;
+
+let prepend li item =
+	li := item :: !li
+;;
+
+let module_sources = List.map module_filename selected_modules
+;;
+
+(* Inform the user of the configuration *)
+let _ =
+    print_string (findlib_conf # summarize);
+    print_string (module_conf # summarize_params);
+	print_endline "Now 'make' to build the utilities, and 'make install' to install them.\n"
+
+(* The makefile generation information *)
+let _ = output_makefile
+        ~configuration:(module_conf :> AutoMake.configuration)
+
+        (package
+	        ~package:"aspcc"
+            
+	        ~version:"0.1"
+
+	        ~sources:(split 
+			              "frontends/MyArg.mli frontends/MyArg.ml
+            parsed/Symbol.mli parsed/Symbol.ml
+            runtime/Tables.mli runtime/Tables.ml
+			parsed/AspAst.ml
+			runtime/VbTypes.ml
+			parsed/Opcode.ml
+            runtime/VbValues.mli runtime/VbValues.ml
+		    output/vb.mli output/vb.ml
+			output/opcodeDump.ml
+		    parsing/aspParser.mly
+		    parsing/aspLexer.mll
+            typing/Typing.ml
+            runtime/Runtime.mli runtime/Runtime.ml
+            runtime/VbClass.mli runtime/VbClass.ml
+		    runtime/AstRun.mli runtime/AstRun.ml
+			runtime/OpcodeRun.ml
+		    output/lexDump.mli output/lexDump.ml
+		    output/astDump.mli output/astDump.ml")
+
+	        ~findlibs:findlib_names
+
+	        ~includes:["parsed"; "parsing"; "runtime"; "output"; "frontends"; "compile"; "typing"]
+	        
+	        ~flags:[
+                [`document], ["-I ml -colorize-code -sort -keep-code"];
+		        [`mly], ["-v"];
+		        [`compile; `byte], ["-g"];
+	        ]
+
+	        (* document all modules regardless of inclusion *)
+	        [
+		        documentation "docs" 
+			     ~sources:(split 
+				               "runtime/modules/vbStdLib.ml runtime/modules/scripting.ml
+				runtime/modules/msXml_pxp.ml runtime/modules/msXml_gdome2.ml
+				runtime/modules/aspConsole.ml
+				frontends/aspcc.ml frontends/mod_aspcc.ml");
+	            
+		        executable "aspcc" 
+			        ~sources:(module_sources @ (split "compile/compile.ml frontends/aspcc.ml"));
+		       
+                executable "asptop"
+                    ~sources:(module_sources @ (split "compile/compile.ml frontends/asptop.ml"));
+ 
+                executable "aspdoc" 
+			        ~sources:(split "parsed/doc.mli parsed/doc.ml
+                            output/HtmlDoc.mli output/HtmlDoc.ml
+                            frontends/aspdoc.ml");
+
+                executable "aspcheck"
+                    ~sources:["frontends/aspcheck.ml"]
+	        ]
+)
+;;
+
+
+
+
+
+
+
+

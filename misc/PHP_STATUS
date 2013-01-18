@@ -1,0 +1,177 @@
+We can output the lexed stuff, minus a lot of tokens, an XML version of the 
+abstract syntax tree, or PHP code.  The PHP is by far the most complete
+
+Statements:                 
+    Call                        y
+    Class ... End Class         y
+    Const                       y
+    Dim                         * cannot dim multidimensional arrays
+    Do ... Loop                 y
+    Erase                       y
+    Execute                     y
+    Exit                        * 'break' or 'retern' without regard to nesting
+    For ... Next                y
+    For Each ... Next           y
+    Function                    y
+    If                          y
+    On Error                    * ignored
+    Option Explicit             * ignored
+    Private                     y - no private/public in PHP
+    Property Get                y - implemented as function
+    Property Let                y - implemented as function
+    Property Set                y - implemented as function
+    Public                      y - no private/public in PHP
+    Randomize                   y   
+    ReDim                       * cannot redim multi-dim arrays yet
+    Rem                         y
+    Select Case                 y
+    Set                         y
+    Sub                         y
+    While                       y
+    With ... End With           * syntax is accepted, but meaning is ignored
+    '   (comment)               y
+
+legend:
+    'DIRECT MAP' - there was an identical or near-identical php function
+    'CAST' - the function is equivalent to a php type-cast operation
+    'PHP' - the function is implemented in the included asp_implementations.php
+    'UNSUPPORTED' - the function is not supported/implemented; see note for why
+
+Functions:          DIRECT MAP      CAST    PHP     UNSUPPORTED 
+    Abs             abs
+    Array           array
+    Asc             ord
+    Atn             atan
+    CBool                           bool
+    CByte                           int
+    CCur                            double
+    CDate                                   datevalue
+    CDbl                            double
+    Chr                             chr
+    CInt                            int
+    CLng                            int
+    Cos             cos
+    CreateObject                                        not meaningful
+    CSng                            float
+    CStr                            string
+    Date            date("m/d/Y")
+    DateAdd                                 php*
+    DateDiff                                php*
+    DatePart                                php*
+    DateSerial      mktime (reorder params)
+    DateValue                               php
+    Day             getdate(..)['mday']
+    Eval                                                cannot 
+    Exp             exp
+    Filter                                  php
+    Fix                                     php
+    FormatCurrency                          php '$' . formatnumber
+    FormatDateTime                          php
+    FormatNumber                            php
+    FormatPercent                           php
+    GetLocale                                           ??
+    GetObject                                           not meaningful
+    GetRef                                              not meaningful
+    Hex             dechex
+    Hour            getdate(..)['hours']
+    InputBox                                            not meaningful
+    InStr                                   php
+    InStrRev                                php
+    Int                             int
+    IsArray         is_array
+    IsDate                                  php
+    IsEmpty         !%s
+    IsNull          !%s
+    IsNumeric       is_numeric
+    IsObject        is_object
+    Join            join (reordered params)
+    LBound          0
+    LCase           strtolower
+    Left                                    php
+    Len             strlen
+    LoadPicture                                         not meaningful
+    Log             log
+    LTrim           ltrim
+    Mid             substr
+    Minute          getdate(..)['minutes']
+    Month           getdate(..)['mon']
+    MonthName                               php 
+    MsgBox                                              not meaningful
+    Now             date("D M d H:i:s Y")
+    Oct             decoct
+    Replace                                             n
+    RGB                                                 ??
+    Right                                   php
+    Rnd             rand
+    Round           round
+    RTrim           rtrim
+    ScriptEngine                                        barely meaningful
+    ScriptEngineBuildVersion                            barely meaningful
+    ScriptEngineMajorVersion                            barely meaningful
+    ScriptEngineMinorVersion                            barely meaningful
+    Second                                              n
+    SetLocale                                           ??
+    Sgn                                                 n
+    Sin             sin
+    Space           str_pad('',%i)
+    Split                                               n
+    Sqr             * operator
+    StrComp                                             n
+    String          str_pad('',%i,%s)
+    StrReverse      strrev
+    Tan             tan
+    Time            date('h:i:s A')
+    Timer                                               n
+    TimeSerial      mktime
+    TimeValue                               php
+    Trim            trim
+    UBound          count(..)-1
+    UCase           strtoupper
+    VarType                                             n
+    Weekday         getdate(..)['wday']+1
+    WeekdayName                             php*
+    Year            getdate(..)['year']
+
+* most date functions ignore their optional 'firstdayofweek' and 'firstweekofyear' parameters
+
+Operators:
+    And     y   
+    Eqv     y
+    Imp     y
+    Is      y
+    Mod     y
+    Not     y
+    Or      y
+    Xor     y
+    =       y
+    <       y
+    >       y
+    <=      y
+    >=      y
+    <>      y
+    +       y
+    &       y
+    -       y
+    /       y
+    \       y
+    *       y
+    ^       y
+
+Intrinsic Objects:
+    Response:
+        .Write   echo
+        .End     exit
+
+    Server:
+        .Execute    require
+        .Transfer   require;exit
+
+XML Objects:
+
+
+Ado Objects:
+
+
+
+
+

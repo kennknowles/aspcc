@@ -1,0 +1,29 @@
+Tricky semantic points (and by "tricky" I mean "probably a bad idea but must be emulated")
+
+x = 3
+-----
+
+The two ways to interpret this are:
+	1)	If x is an object, and has a default property then apply its 'let' procedure to [3]
+	2)	Otherwise x is a normal variable and is assigned directly
+
+
+x(4) = "hello"
+--------------
+
+Again,
+	1)	If x is an object, and has a default property, apply it's 'let' procedure to [4; "hello"]
+	2)	Otherwise, x must be an array, and we assign the 4th field
+
+Date
+----
+
+Here is how COM, and thus vbScript, represent dates... we will copy them, or
+at least behave correctly when dates are used in math:
+
+http://www.aspfaqs.com/ASPscripts/PrintFAQ.asp?FAQID=189
+
+A date is stored as a double precision value which is days since
+30 December 1899
+
+

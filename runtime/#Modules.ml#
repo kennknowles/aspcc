@@ -1,0 +1,117 @@
+
+open VbValues
+open VbTypes
+open SymbolTable
+
+type ('statement, 'expression) t = {
+    mutable exec : ('statement, 'expression) exec_func;
+    mutable eval : ('statement, 'expression) eval_func;
+	mutable output : string -> unit;
+	mutable script_path : string;
+	scope : SymbolTable.scope_t;
+	options : (runtime_option, bool) Hashtbl.t
+}
+
+and ('statement, 'expression) exec_func = ('statement, 'expression) t -> 'statement -> unit
+and ('statement, 'expression) eval_func = 
+        ('statement, 'expression) t -> ?return_object:bool -> 'expression -> value_t ref
+
+type error = {
+	(* Description of the error *)
+	err_descr : string;
+	err_number : int;
+
+	(* Where the error occured *)
+	err_filename : int;
+	err_linenum : int;
+}
+
+(*	all the other runtime error exceptions should be caught and turned into
+	this, but this should rarely be called directly *)
+
+(*	The options that are given values here are the definition of which may
+	exist. *)
+let create ~exec ~eval ~output = 
+	let opts = Hashtbl.create 10 in
+	List.iter (fun (x,y) -> Hashtbl.add opts x y)
+		[
+			`on_error_resume_next, false;
+			`option_explicit, false;
+			`escape_chars, false
+		];
+	{
+        exec = exec;
+        eval = eval;
+		output = print_string; 
+		scope = SymbolTable.create_scope ();
+		options = opts;
+		script_path = ""
+	}
+;;
+
+let copy runtime = {
+	output = runtime.output;
+    exec = runtime.exec;
+    eval = runtime.eval;
+	scope = SymbolTable.copy_scope runtime.scope;
+	options = Hashtbl.copy runtime.options;
+	script_path = runtime.script_path
+}
+
+
+
+let set_option runtime opt value =
+	Hashtbl.replace runtime.options opt value
+
+let get_option runtime opt =
+	Hashtbl.find runtime.options opt
+
+
+
+let add_function runtime name func =
+	SymbolTable.add runtime.scope.functions name func
+        
+let add_class runtime name the_class =
+	SymbolTable.add runtime.scope.classes name the_class
+
+let add_variable runtime name value =
+	SymbolTable.add runtime.scope.variables name value
+        
+let add_object runtime ~of_class name  =
+	let the_class = (SymbolTable.find runtime.scope.classes of_class) in
+    let new_obj = wrap_object (the_class ()) in
+	SymbolTable.add runtime.scope.variables name new_obj
+
+let exec runtime statement = runtime.exec runtime statement
+let eval ?(return_object = false) runtime expression = runtime.eval runtime ~return_object expression
+let output runtime s = runtime.output s
+
+open Printf
+let raise_error position statement msg =
+    raise (Error (sprintf "\nIn %s: Line %i: Runtime error near '%s':\n\t%s" 
+		              position.Lexing.pos_fname
+		              position.Lexing.pos_lnum 
+		              (Vb.string_of_statement statement) 
+		              msg))
+        
+
+type restricted_t = (AspAst.statement, AspAst.rvalue) t
+
+type load_function = restricted_t -> unit
+    
+let modules = (ref [] : (string * load_function) list ref)
+
+(* If a module is loaded twice, it will be ignored *)
+let register_module name loader =
+	if not (List.mem_assoc name !modules) then
+		modules := !modules @ [(name, loader)]
+            
+let apply_module runtime name =
+	(List.assoc name !modules) runtime
+    
+let apply_all_modules runtime =
+	List.iter (fun (_,loader) -> loader runtime) !modules
+        
+(* i kind of wish ocaml had this, but it is trivial.. as long as it is
+   custom for me, i'll return an int :-) *)
+

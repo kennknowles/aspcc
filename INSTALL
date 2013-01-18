@@ -1,0 +1,40 @@
+
+Quick Version:
+
+	$ tar xjvf aspcc-<version>.tar.bz2
+	$ cd aspcc-<version>
+	$ ./configure
+	$ make
+	# make install
+	# cp aspcc /var/www/cgi-bin/aspcc_cgi
+	$ cp misc/htaccess /var/www/asproot/.htaccess
+
+Long Version:
+
+1)	'./configure'
+	'./configure --help' will indicate parameters to
+	compilation that you might want to set.
+
+2)	'make'
+	This will build ASPCC according to your ./configure instructions.
+
+3)	'make install'
+	Run this as root, or someone with permissions to the install dir.
+	This should install aspcc and aspdoc to the place specified in 
+	'./configure', usually /usr/local/bin
+
+3)	If you want to plug ASPCC into Apache, there are a number of ways,
+	and here is the easiest:
+
+	*	Copy the aspcc executable (or the .opt executable) to
+		some directory with CGI permissions and *rename* it
+		aspcc_cgi
+
+		Note to the technical: Sorry about this, but through current Apache
+		configs I can't just pass a command line toggle to set it to
+		CGI mode, so I inspect argv[0]
+
+	*	In the parent directory of wherever you put your ASP code, copy 
+		misc/htaccess to '.htaccess' file, editing it to reflect the correct
+		path to your aspcc_cgi
+

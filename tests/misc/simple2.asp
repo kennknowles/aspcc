@@ -1,0 +1,4 @@
+<%
+dim hello
+dim howdy()
+%>

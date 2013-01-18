@@ -1,0 +1,6626 @@
+   0  $accept : %entry% $end
+
+   1  page : statement_list
+
+   2  statement_list : terminated_statement statement_list
+   3                 | EOF
+   4                 |
+
+   5  compound_block : separator statement_list
+
+   6  terminated_statement : statement EOF
+   7                       | statement separator
+   8                       | separator
+
+   9  at_least_one_separator : separator at_least_one_separator
+  10                         | separator
+
+  11  separator : INLINE_VALUE rvalue
+  12            | HTML
+  13            | SSI
+  14            | COMMENT
+  15            | EOL
+  16            | COLON
+
+  17  statement : statement_body
+
+  18  statement_body : CALL identifier
+  19                 | CLASS permissive_ident optional_inherits compound_block END CLASS
+  20                 | CONST permissive_ident EQUALS rvalue
+  21                 | DIM identifier_comma_list
+  22                 | DO do_condition compound_block LOOP
+  23                 | DO compound_block LOOP do_condition
+  24                 | ERASE identifier
+  25                 | EXECUTE rvalue
+  26                 | EXIT exit_keyword
+  27                 | FOR for_declaration compound_block NEXT
+  28                 | FUNCTION subroutine_definition END FUNCTION
+  29                 | IF rvalue THEN if_then
+  30                 | ON ERROR on_error_statement
+  31                 | OPTION EXPLICIT
+  32                 | member_access_level member_default member_statement
+  33                 | RANDOMIZE L_PAREN R_PAREN
+  34                 | RANDOMIZE
+  35                 | REDIM PRESERVE identifier_comma_list
+  36                 | REDIM identifier_comma_list
+  37                 | select_statement
+  38                 | SET identifier EQUALS rvalue
+  39                 | SUB subroutine_definition END SUB
+  40                 | WHILE rvalue compound_block WEND
+  41                 | WITH identifier separator compound_block END WITH
+  42                 | identifier EQUALS rvalue
+  43                 | identifier
+  44                 | identifier rvalue_list
+  45                 | FUNCTION subroutine_definition END SUB
+  46                 | SUB subroutine_definition END FUNCTION
+
+  47  optional_inherits : INHERITS permissive_ident
+  48                    |
+
+  49  member_default : DEFAULT
+  50                 |
+
+  51  member_statement : identifier_comma_list
+  52                   | FUNCTION subroutine_definition END FUNCTION
+  53                   | SUB subroutine_definition END SUB
+  54                   | PROPERTY property_action subroutine_definition END PROPERTY
+
+  55  member_access_level : PRIVATE
+  56                      | PUBLIC
+
+  57  property_action : GET
+  58                  | SET
+  59                  | LET
+
+  60  do_condition : WHILE rvalue
+  61               | UNTIL rvalue
+
+  62  exit_keyword : FOR
+  63               | DO
+  64               | FUNCTION
+  65               | SUB
+  66               | PROPERTY
+  67               | WHILE
+
+  68  for_declaration : permissive_ident EQUALS rvalue TO rvalue optional_step
+  69                  | EACH permissive_ident IN rvalue
+
+  70  optional_step : STEP rvalue
+  71                |
+
+  72  if_then : statement
+  73          | statement if_else
+  74          | compound_block if_else
+
+  75  if_else : ELSEIF rvalue THEN if_then
+  76          | ELSE statement
+  77          | ELSE statement END IF
+  78          | ELSE compound_block END IF
+  79          | END IF
+
+  80  subroutine_definition : permissive_ident maybe_formal_param_list compound_block
+
+  81  maybe_formal_param_list : L_PAREN formal_param_list R_PAREN
+  82                          | L_PAREN R_PAREN
+  83                          |
+
+  84  formal_param_list : formal_param
+  85                    | formal_param COMMA formal_param_list
+
+  86  formal_param : BYVAL formal_param_ident
+  87               | BYREF formal_param_ident
+  88               | formal_param_ident
+
+  89  formal_param_ident : permissive_ident
+  90                     | EXECUTE
+
+  91  on_error_statement : RESUME NEXT
+  92                     | GOTO INT
+  93                     | GOTO identifier
+
+  94  select_statement : SELECT CASE rvalue at_least_one_separator select_statement_list END SELECT
+
+  95  select_statement_list : CASE select_rvalue compound_block select_statement_list
+  96                        |
+
+  97  select_rvalue : ELSE
+  98                | rvalue_list
+
+  99  rvalue : L_PAREN rvalue R_PAREN
+ 100         | identifier
+ 101         | EVAL L_PAREN rvalue R_PAREN
+ 102         | NEW identifier
+ 103         | MINUS rvalue
+ 104         | rvalue PLUS rvalue
+ 105         | rvalue MINUS rvalue
+ 106         | rvalue MULT rvalue
+ 107         | rvalue DIV rvalue
+ 108         | rvalue MOD rvalue
+ 109         | rvalue INTDIV rvalue
+ 110         | rvalue EXP rvalue
+ 111         | rvalue AND rvalue
+ 112         | rvalue OR rvalue
+ 113         | rvalue XOR rvalue
+ 114         | rvalue IMP rvalue
+ 115         | rvalue EQV rvalue
+ 116         | NOT rvalue
+ 117         | rvalue EQUALS rvalue
+ 118         | rvalue NOT_EQUALS rvalue
+ 119         | rvalue LESS rvalue
+ 120         | rvalue GREATER rvalue
+ 121         | rvalue LESS_EQUAL rvalue
+ 122         | rvalue GREATER_EQUAL rvalue
+ 123         | rvalue IS rvalue
+ 124         | rvalue CONCAT rvalue
+ 125         | literal
+
+ 126  literal : HEX
+ 127          | OCT
+ 128          | INT
+ 129          | FLOAT
+ 130          | STRING
+ 131          | TRUE
+ 132          | FALSE
+ 133          | NULL
+ 134          | NOTHING
+
+ 135  rvalue_list : rvalue
+ 136              | rvalue COMMA rvalue_list
+ 137              | COMMA rvalue_list
+ 138              |
+
+ 139  identifier : permissive_ident
+ 140             | identifier DOT permissive_ident
+ 141             | identifier DOT END
+ 142             | identifier DOT EXECUTE
+ 143             | identifier L_PAREN rvalue_list R_PAREN
+
+ 144  identifier_comma_list : identifier
+ 145                        | identifier COMMA identifier_comma_list
+
+ 146  permissive_ident : IDENT
+ 147                   | PROPERTY
+ 148                   | ERROR
+
+ 149  %entry% : '\001' statement_list
+ 150          | '\002' rvalue
+ 151          | '\003' page
+
+state 0
+	$accept : . %entry% $end  (0)
+
+	'\001'  shift 1
+	'\002'  shift 2
+	'\003'  shift 3
+	.  error
+
+	%entry%  goto 4
+
+
+state 1
+	%entry% : '\001' . statement_list  (149)
+	statement_list : .  (4)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOF  shift 35
+	EOL  shift 36
+	$end  reduce 4
+
+	statement_list  goto 37
+	terminated_statement  goto 38
+	separator  goto 39
+	statement  goto 40
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 2
+	%entry% : '\002' . rvalue  (150)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 60
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 3
+	%entry% : '\003' . page  (151)
+	statement_list : .  (4)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOF  shift 35
+	EOL  shift 36
+	$end  reduce 4
+
+	statement_list  goto 63
+	page  goto 64
+	terminated_statement  goto 38
+	separator  goto 39
+	statement  goto 40
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 4
+	$accept : %entry% . $end  (0)
+
+	$end  accept
+
+
+state 5
+	separator : HTML .  (12)
+
+	.  reduce 12
+
+
+state 6
+	separator : SSI .  (13)
+
+	.  reduce 13
+
+
+state 7
+	separator : INLINE_VALUE . rvalue  (11)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 65
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 8
+	statement_body : CALL . identifier  (18)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 66
+	permissive_ident  goto 43
+
+
+state 9
+	statement_body : CLASS . permissive_ident optional_inherits compound_block END CLASS  (19)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 67
+
+
+state 10
+	statement_body : CONST . permissive_ident EQUALS rvalue  (20)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 68
+
+
+state 11
+	statement_body : DIM . identifier_comma_list  (21)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 69
+	permissive_ident  goto 43
+	identifier_comma_list  goto 70
+
+
+state 12
+	statement_body : DO . do_condition compound_block LOOP  (22)
+	statement_body : DO . compound_block LOOP do_condition  (23)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	UNTIL  shift 71
+	WHILE  shift 72
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 73
+	separator  goto 74
+	do_condition  goto 75
+
+
+state 13
+	statement_body : ERASE . identifier  (24)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 76
+	permissive_ident  goto 43
+
+
+state 14
+	permissive_ident : ERROR .  (148)
+
+	.  reduce 148
+
+
+state 15
+	statement_body : EXECUTE . rvalue  (25)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 77
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 16
+	statement_body : EXIT . exit_keyword  (26)
+
+	DO  shift 78
+	FOR  shift 79
+	FUNCTION  shift 80
+	PROPERTY  shift 81
+	SUB  shift 82
+	WHILE  shift 83
+	.  error
+
+	exit_keyword  goto 84
+
+
+state 17
+	statement_body : FOR . for_declaration compound_block NEXT  (27)
+
+	EACH  shift 85
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 86
+	for_declaration  goto 87
+
+
+state 18
+	statement_body : FUNCTION . subroutine_definition END FUNCTION  (28)
+	statement_body : FUNCTION . subroutine_definition END SUB  (45)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 88
+	subroutine_definition  goto 89
+
+
+state 19
+	statement_body : IF . rvalue THEN if_then  (29)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 90
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 20
+	statement_body : ON . ERROR on_error_statement  (30)
+
+	ERROR  shift 91
+	.  error
+
+
+state 21
+	statement_body : OPTION . EXPLICIT  (31)
+
+	EXPLICIT  shift 92
+	.  error
+
+
+state 22
+	member_access_level : PRIVATE .  (55)
+
+	.  reduce 55
+
+
+state 23
+	permissive_ident : PROPERTY .  (147)
+
+	.  reduce 147
+
+
+state 24
+	member_access_level : PUBLIC .  (56)
+
+	.  reduce 56
+
+
+state 25
+	statement_body : RANDOMIZE . L_PAREN R_PAREN  (33)
+	statement_body : RANDOMIZE .  (34)
+
+	L_PAREN  shift 93
+	HTML  reduce 34
+	SSI  reduce 34
+	INLINE_VALUE  reduce 34
+	END  reduce 34
+	ELSE  reduce 34
+	ELSEIF  reduce 34
+	COMMENT  reduce 34
+	COLON  reduce 34
+	EOF  reduce 34
+	EOL  reduce 34
+
+
+state 26
+	statement_body : REDIM . PRESERVE identifier_comma_list  (35)
+	statement_body : REDIM . identifier_comma_list  (36)
+
+	ERROR  shift 14
+	PRESERVE  shift 94
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 69
+	permissive_ident  goto 43
+	identifier_comma_list  goto 95
+
+
+state 27
+	select_statement : SELECT . CASE rvalue at_least_one_separator select_statement_list END SELECT  (94)
+
+	CASE  shift 96
+	.  error
+
+
+state 28
+	statement_body : SET . identifier EQUALS rvalue  (38)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 97
+	permissive_ident  goto 43
+
+
+state 29
+	statement_body : SUB . subroutine_definition END SUB  (39)
+	statement_body : SUB . subroutine_definition END FUNCTION  (46)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 88
+	subroutine_definition  goto 98
+
+
+state 30
+	statement_body : WHILE . rvalue compound_block WEND  (40)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 99
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 31
+	statement_body : WITH . identifier separator compound_block END WITH  (41)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 100
+	permissive_ident  goto 43
+
+
+state 32
+	separator : COMMENT .  (14)
+
+	.  reduce 14
+
+
+state 33
+	permissive_ident : IDENT .  (146)
+
+	.  reduce 146
+
+
+state 34
+	separator : COLON .  (16)
+
+	.  reduce 16
+
+
+state 35
+	statement_list : EOF .  (3)
+
+	.  reduce 3
+
+
+state 36
+	separator : EOL .  (15)
+
+	.  reduce 15
+
+
+state 37
+	%entry% : '\001' statement_list .  (149)
+
+	.  reduce 149
+
+
+state 38
+	statement_list : terminated_statement . statement_list  (2)
+	statement_list : .  (4)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOF  shift 35
+	EOL  shift 36
+	$end  reduce 4
+	CASE  reduce 4
+	END  reduce 4
+	ELSE  reduce 4
+	ELSEIF  reduce 4
+	LOOP  reduce 4
+	NEXT  reduce 4
+	WEND  reduce 4
+
+	statement_list  goto 101
+	terminated_statement  goto 38
+	separator  goto 39
+	statement  goto 40
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 39
+	terminated_statement : separator .  (8)
+
+	.  reduce 8
+
+
+state 40
+	terminated_statement : statement . EOF  (6)
+	terminated_statement : statement . separator  (7)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOF  shift 102
+	EOL  shift 36
+	.  error
+
+	separator  goto 103
+
+
+state 41
+	statement : statement_body .  (17)
+
+	.  reduce 17
+
+
+42: reduce/reduce conflict (reduce 43, reduce 138) on HTML
+42: reduce/reduce conflict (reduce 43, reduce 138) on SSI
+42: reduce/reduce conflict (reduce 43, reduce 138) on INLINE_VALUE
+42: reduce/reduce conflict (reduce 43, reduce 138) on END
+42: reduce/reduce conflict (reduce 43, reduce 138) on ELSE
+42: reduce/reduce conflict (reduce 43, reduce 138) on ELSEIF
+42: reduce/reduce conflict (reduce 43, reduce 138) on COMMENT
+42: reduce/reduce conflict (reduce 43, reduce 138) on COLON
+42: reduce/reduce conflict (reduce 43, reduce 138) on EOF
+42: reduce/reduce conflict (reduce 43, reduce 138) on EOL
+state 42
+	statement_body : identifier . EQUALS rvalue  (42)
+	statement_body : identifier .  (43)
+	statement_body : identifier . rvalue_list  (44)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+	rvalue_list : .  (138)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 104
+	DOT  shift 105
+	COMMA  shift 106
+	EQUALS  shift 107
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	HTML  reduce 43
+	SSI  reduce 43
+	INLINE_VALUE  reduce 43
+	END  reduce 43
+	ELSE  reduce 43
+	ELSEIF  reduce 43
+	COMMENT  reduce 43
+	COLON  reduce 43
+	EOF  reduce 43
+	EOL  reduce 43
+
+	rvalue  goto 108
+	identifier  goto 61
+	permissive_ident  goto 43
+	rvalue_list  goto 109
+	literal  goto 62
+
+
+state 43
+	identifier : permissive_ident .  (139)
+
+	.  reduce 139
+
+
+state 44
+	statement_body : member_access_level . member_default member_statement  (32)
+	member_default : .  (50)
+
+	DEFAULT  shift 110
+	ERROR  reduce 50
+	FUNCTION  reduce 50
+	PROPERTY  reduce 50
+	SUB  reduce 50
+	IDENT  reduce 50
+
+	member_default  goto 111
+
+
+state 45
+	statement_body : select_statement .  (37)
+
+	.  reduce 37
+
+
+state 46
+	rvalue : EVAL . L_PAREN rvalue R_PAREN  (101)
+
+	L_PAREN  shift 112
+	.  error
+
+
+state 47
+	rvalue : L_PAREN . rvalue R_PAREN  (99)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 113
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 48
+	rvalue : NOT . rvalue  (116)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 114
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 49
+	rvalue : MINUS . rvalue  (103)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 115
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 50
+	rvalue : NEW . identifier  (102)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 116
+	permissive_ident  goto 43
+
+
+state 51
+	literal : INT .  (128)
+
+	.  reduce 128
+
+
+state 52
+	literal : HEX .  (126)
+
+	.  reduce 126
+
+
+state 53
+	literal : OCT .  (127)
+
+	.  reduce 127
+
+
+state 54
+	literal : FLOAT .  (129)
+
+	.  reduce 129
+
+
+state 55
+	literal : STRING .  (130)
+
+	.  reduce 130
+
+
+state 56
+	literal : TRUE .  (131)
+
+	.  reduce 131
+
+
+state 57
+	literal : FALSE .  (132)
+
+	.  reduce 132
+
+
+state 58
+	literal : NULL .  (133)
+
+	.  reduce 133
+
+
+state 59
+	literal : NOTHING .  (134)
+
+	.  reduce 134
+
+
+state 60
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+	%entry% : '\002' rvalue .  (150)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 150
+
+
+state 61
+	rvalue : identifier .  (100)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	$end  reduce 100
+	HTML  reduce 100
+	SSI  reduce 100
+	INLINE_VALUE  reduce 100
+	CALL  reduce 100
+	CASE  reduce 100
+	CLASS  reduce 100
+	CONST  reduce 100
+	DIM  reduce 100
+	DO  reduce 100
+	END  reduce 100
+	ELSE  reduce 100
+	ELSEIF  reduce 100
+	ERASE  reduce 100
+	ERROR  reduce 100
+	EXECUTE  reduce 100
+	EXIT  reduce 100
+	FOR  reduce 100
+	FUNCTION  reduce 100
+	IF  reduce 100
+	IS  reduce 100
+	LOOP  reduce 100
+	ON  reduce 100
+	NEXT  reduce 100
+	OPTION  reduce 100
+	PRIVATE  reduce 100
+	PROPERTY  reduce 100
+	PUBLIC  reduce 100
+	RANDOMIZE  reduce 100
+	REDIM  reduce 100
+	SELECT  reduce 100
+	SET  reduce 100
+	STEP  reduce 100
+	SUB  reduce 100
+	THEN  reduce 100
+	TO  reduce 100
+	WEND  reduce 100
+	WHILE  reduce 100
+	WITH  reduce 100
+	COMMENT  reduce 100
+	IDENT  reduce 100
+	COLON  reduce 100
+	R_PAREN  reduce 100
+	COMMA  reduce 100
+	EQUALS  reduce 100
+	NOT_EQUALS  reduce 100
+	LESS  reduce 100
+	GREATER  reduce 100
+	LESS_EQUAL  reduce 100
+	GREATER_EQUAL  reduce 100
+	AND  reduce 100
+	OR  reduce 100
+	XOR  reduce 100
+	IMP  reduce 100
+	EQV  reduce 100
+	PLUS  reduce 100
+	MINUS  reduce 100
+	MULT  reduce 100
+	DIV  reduce 100
+	INTDIV  reduce 100
+	EXP  reduce 100
+	MOD  reduce 100
+	CONCAT  reduce 100
+	EOF  reduce 100
+	EOL  reduce 100
+
+
+state 62
+	rvalue : literal .  (125)
+
+	.  reduce 125
+
+
+state 63
+	page : statement_list .  (1)
+
+	.  reduce 1
+
+
+state 64
+	%entry% : '\003' page .  (151)
+
+	.  reduce 151
+
+
+state 65
+	separator : INLINE_VALUE rvalue .  (11)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 11
+	HTML  reduce 11
+	SSI  reduce 11
+	INLINE_VALUE  reduce 11
+	CALL  reduce 11
+	CASE  reduce 11
+	CLASS  reduce 11
+	CONST  reduce 11
+	DIM  reduce 11
+	DO  reduce 11
+	END  reduce 11
+	ELSE  reduce 11
+	ELSEIF  reduce 11
+	ERASE  reduce 11
+	ERROR  reduce 11
+	EXECUTE  reduce 11
+	EXIT  reduce 11
+	FOR  reduce 11
+	FUNCTION  reduce 11
+	IF  reduce 11
+	LOOP  reduce 11
+	ON  reduce 11
+	NEXT  reduce 11
+	OPTION  reduce 11
+	PRIVATE  reduce 11
+	PROPERTY  reduce 11
+	PUBLIC  reduce 11
+	RANDOMIZE  reduce 11
+	REDIM  reduce 11
+	SELECT  reduce 11
+	SET  reduce 11
+	SUB  reduce 11
+	WEND  reduce 11
+	WHILE  reduce 11
+	WITH  reduce 11
+	COMMENT  reduce 11
+	IDENT  reduce 11
+	COLON  reduce 11
+	EOF  reduce 11
+	EOL  reduce 11
+
+
+state 66
+	statement_body : CALL identifier .  (18)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	HTML  reduce 18
+	SSI  reduce 18
+	INLINE_VALUE  reduce 18
+	END  reduce 18
+	ELSE  reduce 18
+	ELSEIF  reduce 18
+	COMMENT  reduce 18
+	COLON  reduce 18
+	EOF  reduce 18
+	EOL  reduce 18
+
+
+state 67
+	statement_body : CLASS permissive_ident . optional_inherits compound_block END CLASS  (19)
+	optional_inherits : .  (48)
+
+	INHERITS  shift 138
+	HTML  reduce 48
+	SSI  reduce 48
+	INLINE_VALUE  reduce 48
+	COMMENT  reduce 48
+	COLON  reduce 48
+	EOL  reduce 48
+
+	optional_inherits  goto 139
+
+
+state 68
+	statement_body : CONST permissive_ident . EQUALS rvalue  (20)
+
+	EQUALS  shift 140
+	.  error
+
+
+state 69
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+	identifier_comma_list : identifier .  (144)
+	identifier_comma_list : identifier . COMMA identifier_comma_list  (145)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	COMMA  shift 141
+	HTML  reduce 144
+	SSI  reduce 144
+	INLINE_VALUE  reduce 144
+	END  reduce 144
+	ELSE  reduce 144
+	ELSEIF  reduce 144
+	COMMENT  reduce 144
+	COLON  reduce 144
+	EOF  reduce 144
+	EOL  reduce 144
+
+
+state 70
+	statement_body : DIM identifier_comma_list .  (21)
+
+	.  reduce 21
+
+
+state 71
+	do_condition : UNTIL . rvalue  (61)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 142
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 72
+	do_condition : WHILE . rvalue  (60)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 143
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 73
+	statement_body : DO compound_block . LOOP do_condition  (23)
+
+	LOOP  shift 144
+	.  error
+
+
+state 74
+	compound_block : separator . statement_list  (5)
+	statement_list : .  (4)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOF  shift 35
+	EOL  shift 36
+	CASE  reduce 4
+	END  reduce 4
+	ELSE  reduce 4
+	ELSEIF  reduce 4
+	LOOP  reduce 4
+	NEXT  reduce 4
+	WEND  reduce 4
+
+	statement_list  goto 145
+	terminated_statement  goto 38
+	separator  goto 39
+	statement  goto 40
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 75
+	statement_body : DO do_condition . compound_block LOOP  (22)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 146
+	separator  goto 74
+
+
+state 76
+	statement_body : ERASE identifier .  (24)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	HTML  reduce 24
+	SSI  reduce 24
+	INLINE_VALUE  reduce 24
+	END  reduce 24
+	ELSE  reduce 24
+	ELSEIF  reduce 24
+	COMMENT  reduce 24
+	COLON  reduce 24
+	EOF  reduce 24
+	EOL  reduce 24
+
+
+state 77
+	statement_body : EXECUTE rvalue .  (25)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 25
+	SSI  reduce 25
+	INLINE_VALUE  reduce 25
+	END  reduce 25
+	ELSE  reduce 25
+	ELSEIF  reduce 25
+	COMMENT  reduce 25
+	COLON  reduce 25
+	EOF  reduce 25
+	EOL  reduce 25
+
+
+state 78
+	exit_keyword : DO .  (63)
+
+	.  reduce 63
+
+
+state 79
+	exit_keyword : FOR .  (62)
+
+	.  reduce 62
+
+
+state 80
+	exit_keyword : FUNCTION .  (64)
+
+	.  reduce 64
+
+
+state 81
+	exit_keyword : PROPERTY .  (66)
+
+	.  reduce 66
+
+
+state 82
+	exit_keyword : SUB .  (65)
+
+	.  reduce 65
+
+
+state 83
+	exit_keyword : WHILE .  (67)
+
+	.  reduce 67
+
+
+state 84
+	statement_body : EXIT exit_keyword .  (26)
+
+	.  reduce 26
+
+
+state 85
+	for_declaration : EACH . permissive_ident IN rvalue  (69)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 147
+
+
+state 86
+	for_declaration : permissive_ident . EQUALS rvalue TO rvalue optional_step  (68)
+
+	EQUALS  shift 148
+	.  error
+
+
+state 87
+	statement_body : FOR for_declaration . compound_block NEXT  (27)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 149
+	separator  goto 74
+
+
+state 88
+	subroutine_definition : permissive_ident . maybe_formal_param_list compound_block  (80)
+	maybe_formal_param_list : .  (83)
+
+	L_PAREN  shift 150
+	HTML  reduce 83
+	SSI  reduce 83
+	INLINE_VALUE  reduce 83
+	COMMENT  reduce 83
+	COLON  reduce 83
+	EOL  reduce 83
+
+	maybe_formal_param_list  goto 151
+
+
+state 89
+	statement_body : FUNCTION subroutine_definition . END FUNCTION  (28)
+	statement_body : FUNCTION subroutine_definition . END SUB  (45)
+
+	END  shift 152
+	.  error
+
+
+state 90
+	statement_body : IF rvalue . THEN if_then  (29)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	THEN  shift 153
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	.  error
+
+
+state 91
+	statement_body : ON ERROR . on_error_statement  (30)
+
+	GOTO  shift 154
+	RESUME  shift 155
+	.  error
+
+	on_error_statement  goto 156
+
+
+state 92
+	statement_body : OPTION EXPLICIT .  (31)
+
+	.  reduce 31
+
+
+state 93
+	statement_body : RANDOMIZE L_PAREN . R_PAREN  (33)
+
+	R_PAREN  shift 157
+	.  error
+
+
+state 94
+	statement_body : REDIM PRESERVE . identifier_comma_list  (35)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 69
+	permissive_ident  goto 43
+	identifier_comma_list  goto 158
+
+
+state 95
+	statement_body : REDIM identifier_comma_list .  (36)
+
+	.  reduce 36
+
+
+state 96
+	select_statement : SELECT CASE . rvalue at_least_one_separator select_statement_list END SELECT  (94)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 159
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 97
+	statement_body : SET identifier . EQUALS rvalue  (38)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	EQUALS  shift 160
+	.  error
+
+
+state 98
+	statement_body : SUB subroutine_definition . END SUB  (39)
+	statement_body : SUB subroutine_definition . END FUNCTION  (46)
+
+	END  shift 161
+	.  error
+
+
+state 99
+	statement_body : WHILE rvalue . compound_block WEND  (40)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	IS  shift 117
+	COMMENT  shift 32
+	COLON  shift 34
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 162
+	separator  goto 74
+
+
+state 100
+	statement_body : WITH identifier . separator compound_block END WITH  (41)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	L_PAREN  shift 137
+	DOT  shift 105
+	EOL  shift 36
+	.  error
+
+	separator  goto 163
+
+
+state 101
+	statement_list : terminated_statement statement_list .  (2)
+
+	.  reduce 2
+
+
+state 102
+	terminated_statement : statement EOF .  (6)
+
+	.  reduce 6
+
+
+state 103
+	terminated_statement : statement separator .  (7)
+
+	.  reduce 7
+
+
+state 104
+	rvalue : L_PAREN . rvalue R_PAREN  (99)
+	identifier : identifier L_PAREN . rvalue_list R_PAREN  (143)
+	rvalue_list : .  (138)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	COMMA  shift 106
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	R_PAREN  reduce 138
+
+	rvalue  goto 164
+	identifier  goto 61
+	permissive_ident  goto 43
+	rvalue_list  goto 165
+	literal  goto 62
+
+
+state 105
+	identifier : identifier DOT . permissive_ident  (140)
+	identifier : identifier DOT . END  (141)
+	identifier : identifier DOT . EXECUTE  (142)
+
+	END  shift 166
+	ERROR  shift 14
+	EXECUTE  shift 167
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 168
+
+
+state 106
+	rvalue_list : COMMA . rvalue_list  (137)
+	rvalue_list : .  (138)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	COMMA  shift 106
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	HTML  reduce 138
+	SSI  reduce 138
+	INLINE_VALUE  reduce 138
+	END  reduce 138
+	ELSE  reduce 138
+	ELSEIF  reduce 138
+	COMMENT  reduce 138
+	COLON  reduce 138
+	R_PAREN  reduce 138
+	EOF  reduce 138
+	EOL  reduce 138
+
+	rvalue  goto 108
+	identifier  goto 61
+	permissive_ident  goto 43
+	rvalue_list  goto 169
+	literal  goto 62
+
+
+state 107
+	statement_body : identifier EQUALS . rvalue  (42)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 170
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 108
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+	rvalue_list : rvalue .  (135)
+	rvalue_list : rvalue . COMMA rvalue_list  (136)
+
+	IS  shift 117
+	COMMA  shift 171
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 135
+	SSI  reduce 135
+	INLINE_VALUE  reduce 135
+	END  reduce 135
+	ELSE  reduce 135
+	ELSEIF  reduce 135
+	COMMENT  reduce 135
+	COLON  reduce 135
+	R_PAREN  reduce 135
+	EOF  reduce 135
+	EOL  reduce 135
+
+
+state 109
+	statement_body : identifier rvalue_list .  (44)
+
+	.  reduce 44
+
+
+state 110
+	member_default : DEFAULT .  (49)
+
+	.  reduce 49
+
+
+state 111
+	statement_body : member_access_level member_default . member_statement  (32)
+
+	ERROR  shift 14
+	FUNCTION  shift 172
+	PROPERTY  shift 173
+	SUB  shift 174
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 69
+	permissive_ident  goto 43
+	identifier_comma_list  goto 175
+	member_statement  goto 176
+
+
+state 112
+	rvalue : EVAL L_PAREN . rvalue R_PAREN  (101)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 177
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 113
+	rvalue : L_PAREN rvalue . R_PAREN  (99)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	R_PAREN  shift 178
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	.  error
+
+
+state 114
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : NOT rvalue .  (116)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 116
+	HTML  reduce 116
+	SSI  reduce 116
+	INLINE_VALUE  reduce 116
+	CALL  reduce 116
+	CASE  reduce 116
+	CLASS  reduce 116
+	CONST  reduce 116
+	DIM  reduce 116
+	DO  reduce 116
+	END  reduce 116
+	ELSE  reduce 116
+	ELSEIF  reduce 116
+	ERASE  reduce 116
+	ERROR  reduce 116
+	EXECUTE  reduce 116
+	EXIT  reduce 116
+	FOR  reduce 116
+	FUNCTION  reduce 116
+	IF  reduce 116
+	LOOP  reduce 116
+	ON  reduce 116
+	NEXT  reduce 116
+	OPTION  reduce 116
+	PRIVATE  reduce 116
+	PROPERTY  reduce 116
+	PUBLIC  reduce 116
+	RANDOMIZE  reduce 116
+	REDIM  reduce 116
+	SELECT  reduce 116
+	SET  reduce 116
+	STEP  reduce 116
+	SUB  reduce 116
+	THEN  reduce 116
+	TO  reduce 116
+	WEND  reduce 116
+	WHILE  reduce 116
+	WITH  reduce 116
+	COMMENT  reduce 116
+	IDENT  reduce 116
+	COLON  reduce 116
+	R_PAREN  reduce 116
+	COMMA  reduce 116
+	AND  reduce 116
+	OR  reduce 116
+	XOR  reduce 116
+	IMP  reduce 116
+	EQV  reduce 116
+	EOF  reduce 116
+	EOL  reduce 116
+
+
+state 115
+	rvalue : MINUS rvalue .  (103)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	.  reduce 103
+
+
+state 116
+	rvalue : NEW identifier .  (102)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	$end  reduce 102
+	HTML  reduce 102
+	SSI  reduce 102
+	INLINE_VALUE  reduce 102
+	CALL  reduce 102
+	CASE  reduce 102
+	CLASS  reduce 102
+	CONST  reduce 102
+	DIM  reduce 102
+	DO  reduce 102
+	END  reduce 102
+	ELSE  reduce 102
+	ELSEIF  reduce 102
+	ERASE  reduce 102
+	ERROR  reduce 102
+	EXECUTE  reduce 102
+	EXIT  reduce 102
+	FOR  reduce 102
+	FUNCTION  reduce 102
+	IF  reduce 102
+	IS  reduce 102
+	LOOP  reduce 102
+	ON  reduce 102
+	NEXT  reduce 102
+	OPTION  reduce 102
+	PRIVATE  reduce 102
+	PROPERTY  reduce 102
+	PUBLIC  reduce 102
+	RANDOMIZE  reduce 102
+	REDIM  reduce 102
+	SELECT  reduce 102
+	SET  reduce 102
+	STEP  reduce 102
+	SUB  reduce 102
+	THEN  reduce 102
+	TO  reduce 102
+	WEND  reduce 102
+	WHILE  reduce 102
+	WITH  reduce 102
+	COMMENT  reduce 102
+	IDENT  reduce 102
+	COLON  reduce 102
+	R_PAREN  reduce 102
+	COMMA  reduce 102
+	EQUALS  reduce 102
+	NOT_EQUALS  reduce 102
+	LESS  reduce 102
+	GREATER  reduce 102
+	LESS_EQUAL  reduce 102
+	GREATER_EQUAL  reduce 102
+	AND  reduce 102
+	OR  reduce 102
+	XOR  reduce 102
+	IMP  reduce 102
+	EQV  reduce 102
+	PLUS  reduce 102
+	MINUS  reduce 102
+	MULT  reduce 102
+	DIV  reduce 102
+	INTDIV  reduce 102
+	EXP  reduce 102
+	MOD  reduce 102
+	CONCAT  reduce 102
+	EOF  reduce 102
+	EOL  reduce 102
+
+
+state 117
+	rvalue : rvalue IS . rvalue  (123)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 179
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 118
+	rvalue : rvalue EQUALS . rvalue  (117)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 180
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 119
+	rvalue : rvalue NOT_EQUALS . rvalue  (118)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 181
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 120
+	rvalue : rvalue LESS . rvalue  (119)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 182
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 121
+	rvalue : rvalue GREATER . rvalue  (120)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 183
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 122
+	rvalue : rvalue LESS_EQUAL . rvalue  (121)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 184
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 123
+	rvalue : rvalue GREATER_EQUAL . rvalue  (122)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 185
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 124
+	rvalue : rvalue AND . rvalue  (111)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 186
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 125
+	rvalue : rvalue OR . rvalue  (112)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 187
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 126
+	rvalue : rvalue XOR . rvalue  (113)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 188
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 127
+	rvalue : rvalue IMP . rvalue  (114)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 189
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 128
+	rvalue : rvalue EQV . rvalue  (115)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 190
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 129
+	rvalue : rvalue PLUS . rvalue  (104)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 191
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 130
+	rvalue : rvalue MINUS . rvalue  (105)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 192
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 131
+	rvalue : rvalue MULT . rvalue  (106)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 193
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 132
+	rvalue : rvalue DIV . rvalue  (107)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 194
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 133
+	rvalue : rvalue INTDIV . rvalue  (109)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 195
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 134
+	rvalue : rvalue EXP . rvalue  (110)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 196
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 135
+	rvalue : rvalue MOD . rvalue  (108)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 197
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 136
+	rvalue : rvalue CONCAT . rvalue  (124)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 198
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 137
+	identifier : identifier L_PAREN . rvalue_list R_PAREN  (143)
+	rvalue_list : .  (138)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	COMMA  shift 106
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	R_PAREN  reduce 138
+
+	rvalue  goto 108
+	identifier  goto 61
+	permissive_ident  goto 43
+	rvalue_list  goto 165
+	literal  goto 62
+
+
+state 138
+	optional_inherits : INHERITS . permissive_ident  (47)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 199
+
+
+state 139
+	statement_body : CLASS permissive_ident optional_inherits . compound_block END CLASS  (19)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 200
+	separator  goto 74
+
+
+state 140
+	statement_body : CONST permissive_ident EQUALS . rvalue  (20)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 201
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 141
+	identifier_comma_list : identifier COMMA . identifier_comma_list  (145)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	identifier  goto 69
+	permissive_ident  goto 43
+	identifier_comma_list  goto 202
+
+
+state 142
+	do_condition : UNTIL rvalue .  (61)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 61
+	SSI  reduce 61
+	INLINE_VALUE  reduce 61
+	END  reduce 61
+	ELSE  reduce 61
+	ELSEIF  reduce 61
+	COMMENT  reduce 61
+	COLON  reduce 61
+	EOF  reduce 61
+	EOL  reduce 61
+
+
+state 143
+	do_condition : WHILE rvalue .  (60)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 60
+	SSI  reduce 60
+	INLINE_VALUE  reduce 60
+	END  reduce 60
+	ELSE  reduce 60
+	ELSEIF  reduce 60
+	COMMENT  reduce 60
+	COLON  reduce 60
+	EOF  reduce 60
+	EOL  reduce 60
+
+
+state 144
+	statement_body : DO compound_block LOOP . do_condition  (23)
+
+	UNTIL  shift 71
+	WHILE  shift 72
+	.  error
+
+	do_condition  goto 203
+
+
+state 145
+	compound_block : separator statement_list .  (5)
+
+	.  reduce 5
+
+
+state 146
+	statement_body : DO do_condition compound_block . LOOP  (22)
+
+	LOOP  shift 204
+	.  error
+
+
+state 147
+	for_declaration : EACH permissive_ident . IN rvalue  (69)
+
+	IN  shift 205
+	.  error
+
+
+state 148
+	for_declaration : permissive_ident EQUALS . rvalue TO rvalue optional_step  (68)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 206
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 149
+	statement_body : FOR for_declaration compound_block . NEXT  (27)
+
+	NEXT  shift 207
+	.  error
+
+
+state 150
+	maybe_formal_param_list : L_PAREN . formal_param_list R_PAREN  (81)
+	maybe_formal_param_list : L_PAREN . R_PAREN  (82)
+
+	BYREF  shift 208
+	BYVAL  shift 209
+	ERROR  shift 14
+	EXECUTE  shift 210
+	PROPERTY  shift 23
+	IDENT  shift 33
+	R_PAREN  shift 211
+	.  error
+
+	permissive_ident  goto 212
+	formal_param_list  goto 213
+	formal_param  goto 214
+	formal_param_ident  goto 215
+
+
+state 151
+	subroutine_definition : permissive_ident maybe_formal_param_list . compound_block  (80)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 216
+	separator  goto 74
+
+
+state 152
+	statement_body : FUNCTION subroutine_definition END . FUNCTION  (28)
+	statement_body : FUNCTION subroutine_definition END . SUB  (45)
+
+	FUNCTION  shift 217
+	SUB  shift 218
+	.  error
+
+
+state 153
+	statement_body : IF rvalue THEN . if_then  (29)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 219
+	separator  goto 74
+	statement  goto 220
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	if_then  goto 221
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 154
+	on_error_statement : GOTO . INT  (92)
+	on_error_statement : GOTO . identifier  (93)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	INT  shift 222
+	.  error
+
+	identifier  goto 223
+	permissive_ident  goto 43
+
+
+state 155
+	on_error_statement : RESUME . NEXT  (91)
+
+	NEXT  shift 224
+	.  error
+
+
+state 156
+	statement_body : ON ERROR on_error_statement .  (30)
+
+	.  reduce 30
+
+
+state 157
+	statement_body : RANDOMIZE L_PAREN R_PAREN .  (33)
+
+	.  reduce 33
+
+
+state 158
+	statement_body : REDIM PRESERVE identifier_comma_list .  (35)
+
+	.  reduce 35
+
+
+state 159
+	select_statement : SELECT CASE rvalue . at_least_one_separator select_statement_list END SELECT  (94)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	IS  shift 117
+	COMMENT  shift 32
+	COLON  shift 34
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	EOL  shift 36
+	.  error
+
+	separator  goto 225
+	at_least_one_separator  goto 226
+
+
+state 160
+	statement_body : SET identifier EQUALS . rvalue  (38)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 227
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 161
+	statement_body : SUB subroutine_definition END . SUB  (39)
+	statement_body : SUB subroutine_definition END . FUNCTION  (46)
+
+	FUNCTION  shift 228
+	SUB  shift 229
+	.  error
+
+
+state 162
+	statement_body : WHILE rvalue compound_block . WEND  (40)
+
+	WEND  shift 230
+	.  error
+
+
+state 163
+	statement_body : WITH identifier separator . compound_block END WITH  (41)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 231
+	separator  goto 74
+
+
+state 164
+	rvalue : L_PAREN rvalue . R_PAREN  (99)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+	rvalue_list : rvalue .  (135)
+	rvalue_list : rvalue . COMMA rvalue_list  (136)
+
+	IS  shift 117
+	COMMA  shift 171
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	R_PAREN  reduce 135
+
+
+state 165
+	identifier : identifier L_PAREN rvalue_list . R_PAREN  (143)
+
+	R_PAREN  shift 232
+	.  error
+
+
+state 166
+	identifier : identifier DOT END .  (141)
+
+	.  reduce 141
+
+
+state 167
+	identifier : identifier DOT EXECUTE .  (142)
+
+	.  reduce 142
+
+
+state 168
+	identifier : identifier DOT permissive_ident .  (140)
+
+	.  reduce 140
+
+
+state 169
+	rvalue_list : COMMA rvalue_list .  (137)
+
+	.  reduce 137
+
+
+state 170
+	statement_body : identifier EQUALS rvalue .  (42)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 42
+	SSI  reduce 42
+	INLINE_VALUE  reduce 42
+	END  reduce 42
+	ELSE  reduce 42
+	ELSEIF  reduce 42
+	COMMENT  reduce 42
+	COLON  reduce 42
+	EOF  reduce 42
+	EOL  reduce 42
+
+
+state 171
+	rvalue_list : rvalue COMMA . rvalue_list  (136)
+	rvalue_list : .  (138)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	COMMA  shift 106
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	HTML  reduce 138
+	SSI  reduce 138
+	INLINE_VALUE  reduce 138
+	END  reduce 138
+	ELSE  reduce 138
+	ELSEIF  reduce 138
+	COMMENT  reduce 138
+	COLON  reduce 138
+	R_PAREN  reduce 138
+	EOF  reduce 138
+	EOL  reduce 138
+
+	rvalue  goto 108
+	identifier  goto 61
+	permissive_ident  goto 43
+	rvalue_list  goto 233
+	literal  goto 62
+
+
+state 172
+	member_statement : FUNCTION . subroutine_definition END FUNCTION  (52)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 88
+	subroutine_definition  goto 234
+
+
+state 173
+	member_statement : PROPERTY . property_action subroutine_definition END PROPERTY  (54)
+	permissive_ident : PROPERTY .  (147)
+
+	GET  shift 235
+	LET  shift 236
+	SET  shift 237
+	HTML  reduce 147
+	SSI  reduce 147
+	INLINE_VALUE  reduce 147
+	END  reduce 147
+	ELSE  reduce 147
+	ELSEIF  reduce 147
+	COMMENT  reduce 147
+	COLON  reduce 147
+	L_PAREN  reduce 147
+	DOT  reduce 147
+	COMMA  reduce 147
+	EOF  reduce 147
+	EOL  reduce 147
+
+	property_action  goto 238
+
+
+state 174
+	member_statement : SUB . subroutine_definition END SUB  (53)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 88
+	subroutine_definition  goto 239
+
+
+state 175
+	member_statement : identifier_comma_list .  (51)
+
+	.  reduce 51
+
+
+state 176
+	statement_body : member_access_level member_default member_statement .  (32)
+
+	.  reduce 32
+
+
+state 177
+	rvalue : EVAL L_PAREN rvalue . R_PAREN  (101)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	R_PAREN  shift 240
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	.  error
+
+
+state 178
+	rvalue : L_PAREN rvalue R_PAREN .  (99)
+
+	.  reduce 99
+
+
+state 179
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue IS rvalue .  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 123
+	HTML  reduce 123
+	SSI  reduce 123
+	INLINE_VALUE  reduce 123
+	CALL  reduce 123
+	CASE  reduce 123
+	CLASS  reduce 123
+	CONST  reduce 123
+	DIM  reduce 123
+	DO  reduce 123
+	END  reduce 123
+	ELSE  reduce 123
+	ELSEIF  reduce 123
+	ERASE  reduce 123
+	ERROR  reduce 123
+	EXECUTE  reduce 123
+	EXIT  reduce 123
+	FOR  reduce 123
+	FUNCTION  reduce 123
+	IF  reduce 123
+	IS  reduce 123
+	LOOP  reduce 123
+	ON  reduce 123
+	NEXT  reduce 123
+	OPTION  reduce 123
+	PRIVATE  reduce 123
+	PROPERTY  reduce 123
+	PUBLIC  reduce 123
+	RANDOMIZE  reduce 123
+	REDIM  reduce 123
+	SELECT  reduce 123
+	SET  reduce 123
+	STEP  reduce 123
+	SUB  reduce 123
+	THEN  reduce 123
+	TO  reduce 123
+	WEND  reduce 123
+	WHILE  reduce 123
+	WITH  reduce 123
+	COMMENT  reduce 123
+	IDENT  reduce 123
+	COLON  reduce 123
+	R_PAREN  reduce 123
+	COMMA  reduce 123
+	AND  reduce 123
+	OR  reduce 123
+	XOR  reduce 123
+	IMP  reduce 123
+	EQV  reduce 123
+	EOF  reduce 123
+	EOL  reduce 123
+
+
+state 180
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue EQUALS rvalue .  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 117
+	HTML  reduce 117
+	SSI  reduce 117
+	INLINE_VALUE  reduce 117
+	CALL  reduce 117
+	CASE  reduce 117
+	CLASS  reduce 117
+	CONST  reduce 117
+	DIM  reduce 117
+	DO  reduce 117
+	END  reduce 117
+	ELSE  reduce 117
+	ELSEIF  reduce 117
+	ERASE  reduce 117
+	ERROR  reduce 117
+	EXECUTE  reduce 117
+	EXIT  reduce 117
+	FOR  reduce 117
+	FUNCTION  reduce 117
+	IF  reduce 117
+	IS  reduce 117
+	LOOP  reduce 117
+	ON  reduce 117
+	NEXT  reduce 117
+	OPTION  reduce 117
+	PRIVATE  reduce 117
+	PROPERTY  reduce 117
+	PUBLIC  reduce 117
+	RANDOMIZE  reduce 117
+	REDIM  reduce 117
+	SELECT  reduce 117
+	SET  reduce 117
+	STEP  reduce 117
+	SUB  reduce 117
+	THEN  reduce 117
+	TO  reduce 117
+	WEND  reduce 117
+	WHILE  reduce 117
+	WITH  reduce 117
+	COMMENT  reduce 117
+	IDENT  reduce 117
+	COLON  reduce 117
+	R_PAREN  reduce 117
+	COMMA  reduce 117
+	EQUALS  reduce 117
+	NOT_EQUALS  reduce 117
+	LESS  reduce 117
+	GREATER  reduce 117
+	LESS_EQUAL  reduce 117
+	GREATER_EQUAL  reduce 117
+	AND  reduce 117
+	OR  reduce 117
+	XOR  reduce 117
+	IMP  reduce 117
+	EQV  reduce 117
+	EOF  reduce 117
+	EOL  reduce 117
+
+
+state 181
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue NOT_EQUALS rvalue .  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EQUALS  shift 118
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 118
+	HTML  reduce 118
+	SSI  reduce 118
+	INLINE_VALUE  reduce 118
+	CALL  reduce 118
+	CASE  reduce 118
+	CLASS  reduce 118
+	CONST  reduce 118
+	DIM  reduce 118
+	DO  reduce 118
+	END  reduce 118
+	ELSE  reduce 118
+	ELSEIF  reduce 118
+	ERASE  reduce 118
+	ERROR  reduce 118
+	EXECUTE  reduce 118
+	EXIT  reduce 118
+	FOR  reduce 118
+	FUNCTION  reduce 118
+	IF  reduce 118
+	IS  reduce 118
+	LOOP  reduce 118
+	ON  reduce 118
+	NEXT  reduce 118
+	OPTION  reduce 118
+	PRIVATE  reduce 118
+	PROPERTY  reduce 118
+	PUBLIC  reduce 118
+	RANDOMIZE  reduce 118
+	REDIM  reduce 118
+	SELECT  reduce 118
+	SET  reduce 118
+	STEP  reduce 118
+	SUB  reduce 118
+	THEN  reduce 118
+	TO  reduce 118
+	WEND  reduce 118
+	WHILE  reduce 118
+	WITH  reduce 118
+	COMMENT  reduce 118
+	IDENT  reduce 118
+	COLON  reduce 118
+	R_PAREN  reduce 118
+	COMMA  reduce 118
+	NOT_EQUALS  reduce 118
+	LESS  reduce 118
+	GREATER  reduce 118
+	LESS_EQUAL  reduce 118
+	GREATER_EQUAL  reduce 118
+	AND  reduce 118
+	OR  reduce 118
+	XOR  reduce 118
+	IMP  reduce 118
+	EQV  reduce 118
+	EOF  reduce 118
+	EOL  reduce 118
+
+
+state 182
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue LESS rvalue .  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 119
+	HTML  reduce 119
+	SSI  reduce 119
+	INLINE_VALUE  reduce 119
+	CALL  reduce 119
+	CASE  reduce 119
+	CLASS  reduce 119
+	CONST  reduce 119
+	DIM  reduce 119
+	DO  reduce 119
+	END  reduce 119
+	ELSE  reduce 119
+	ELSEIF  reduce 119
+	ERASE  reduce 119
+	ERROR  reduce 119
+	EXECUTE  reduce 119
+	EXIT  reduce 119
+	FOR  reduce 119
+	FUNCTION  reduce 119
+	IF  reduce 119
+	IS  reduce 119
+	LOOP  reduce 119
+	ON  reduce 119
+	NEXT  reduce 119
+	OPTION  reduce 119
+	PRIVATE  reduce 119
+	PROPERTY  reduce 119
+	PUBLIC  reduce 119
+	RANDOMIZE  reduce 119
+	REDIM  reduce 119
+	SELECT  reduce 119
+	SET  reduce 119
+	STEP  reduce 119
+	SUB  reduce 119
+	THEN  reduce 119
+	TO  reduce 119
+	WEND  reduce 119
+	WHILE  reduce 119
+	WITH  reduce 119
+	COMMENT  reduce 119
+	IDENT  reduce 119
+	COLON  reduce 119
+	R_PAREN  reduce 119
+	COMMA  reduce 119
+	LESS  reduce 119
+	GREATER  reduce 119
+	LESS_EQUAL  reduce 119
+	GREATER_EQUAL  reduce 119
+	AND  reduce 119
+	OR  reduce 119
+	XOR  reduce 119
+	IMP  reduce 119
+	EQV  reduce 119
+	EOF  reduce 119
+	EOL  reduce 119
+
+
+state 183
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue GREATER rvalue .  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 120
+	HTML  reduce 120
+	SSI  reduce 120
+	INLINE_VALUE  reduce 120
+	CALL  reduce 120
+	CASE  reduce 120
+	CLASS  reduce 120
+	CONST  reduce 120
+	DIM  reduce 120
+	DO  reduce 120
+	END  reduce 120
+	ELSE  reduce 120
+	ELSEIF  reduce 120
+	ERASE  reduce 120
+	ERROR  reduce 120
+	EXECUTE  reduce 120
+	EXIT  reduce 120
+	FOR  reduce 120
+	FUNCTION  reduce 120
+	IF  reduce 120
+	IS  reduce 120
+	LOOP  reduce 120
+	ON  reduce 120
+	NEXT  reduce 120
+	OPTION  reduce 120
+	PRIVATE  reduce 120
+	PROPERTY  reduce 120
+	PUBLIC  reduce 120
+	RANDOMIZE  reduce 120
+	REDIM  reduce 120
+	SELECT  reduce 120
+	SET  reduce 120
+	STEP  reduce 120
+	SUB  reduce 120
+	THEN  reduce 120
+	TO  reduce 120
+	WEND  reduce 120
+	WHILE  reduce 120
+	WITH  reduce 120
+	COMMENT  reduce 120
+	IDENT  reduce 120
+	COLON  reduce 120
+	R_PAREN  reduce 120
+	COMMA  reduce 120
+	GREATER  reduce 120
+	LESS_EQUAL  reduce 120
+	GREATER_EQUAL  reduce 120
+	AND  reduce 120
+	OR  reduce 120
+	XOR  reduce 120
+	IMP  reduce 120
+	EQV  reduce 120
+	EOF  reduce 120
+	EOL  reduce 120
+
+
+state 184
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue LESS_EQUAL rvalue .  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 121
+	HTML  reduce 121
+	SSI  reduce 121
+	INLINE_VALUE  reduce 121
+	CALL  reduce 121
+	CASE  reduce 121
+	CLASS  reduce 121
+	CONST  reduce 121
+	DIM  reduce 121
+	DO  reduce 121
+	END  reduce 121
+	ELSE  reduce 121
+	ELSEIF  reduce 121
+	ERASE  reduce 121
+	ERROR  reduce 121
+	EXECUTE  reduce 121
+	EXIT  reduce 121
+	FOR  reduce 121
+	FUNCTION  reduce 121
+	IF  reduce 121
+	IS  reduce 121
+	LOOP  reduce 121
+	ON  reduce 121
+	NEXT  reduce 121
+	OPTION  reduce 121
+	PRIVATE  reduce 121
+	PROPERTY  reduce 121
+	PUBLIC  reduce 121
+	RANDOMIZE  reduce 121
+	REDIM  reduce 121
+	SELECT  reduce 121
+	SET  reduce 121
+	STEP  reduce 121
+	SUB  reduce 121
+	THEN  reduce 121
+	TO  reduce 121
+	WEND  reduce 121
+	WHILE  reduce 121
+	WITH  reduce 121
+	COMMENT  reduce 121
+	IDENT  reduce 121
+	COLON  reduce 121
+	R_PAREN  reduce 121
+	COMMA  reduce 121
+	LESS_EQUAL  reduce 121
+	GREATER_EQUAL  reduce 121
+	AND  reduce 121
+	OR  reduce 121
+	XOR  reduce 121
+	IMP  reduce 121
+	EQV  reduce 121
+	EOF  reduce 121
+	EOL  reduce 121
+
+
+state 185
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue GREATER_EQUAL rvalue .  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 122
+	HTML  reduce 122
+	SSI  reduce 122
+	INLINE_VALUE  reduce 122
+	CALL  reduce 122
+	CASE  reduce 122
+	CLASS  reduce 122
+	CONST  reduce 122
+	DIM  reduce 122
+	DO  reduce 122
+	END  reduce 122
+	ELSE  reduce 122
+	ELSEIF  reduce 122
+	ERASE  reduce 122
+	ERROR  reduce 122
+	EXECUTE  reduce 122
+	EXIT  reduce 122
+	FOR  reduce 122
+	FUNCTION  reduce 122
+	IF  reduce 122
+	IS  reduce 122
+	LOOP  reduce 122
+	ON  reduce 122
+	NEXT  reduce 122
+	OPTION  reduce 122
+	PRIVATE  reduce 122
+	PROPERTY  reduce 122
+	PUBLIC  reduce 122
+	RANDOMIZE  reduce 122
+	REDIM  reduce 122
+	SELECT  reduce 122
+	SET  reduce 122
+	STEP  reduce 122
+	SUB  reduce 122
+	THEN  reduce 122
+	TO  reduce 122
+	WEND  reduce 122
+	WHILE  reduce 122
+	WITH  reduce 122
+	COMMENT  reduce 122
+	IDENT  reduce 122
+	COLON  reduce 122
+	R_PAREN  reduce 122
+	COMMA  reduce 122
+	GREATER_EQUAL  reduce 122
+	AND  reduce 122
+	OR  reduce 122
+	XOR  reduce 122
+	IMP  reduce 122
+	EQV  reduce 122
+	EOF  reduce 122
+	EOL  reduce 122
+
+
+state 186
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue AND rvalue .  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 111
+	HTML  reduce 111
+	SSI  reduce 111
+	INLINE_VALUE  reduce 111
+	CALL  reduce 111
+	CASE  reduce 111
+	CLASS  reduce 111
+	CONST  reduce 111
+	DIM  reduce 111
+	DO  reduce 111
+	END  reduce 111
+	ELSE  reduce 111
+	ELSEIF  reduce 111
+	ERASE  reduce 111
+	ERROR  reduce 111
+	EXECUTE  reduce 111
+	EXIT  reduce 111
+	FOR  reduce 111
+	FUNCTION  reduce 111
+	IF  reduce 111
+	LOOP  reduce 111
+	ON  reduce 111
+	NEXT  reduce 111
+	OPTION  reduce 111
+	PRIVATE  reduce 111
+	PROPERTY  reduce 111
+	PUBLIC  reduce 111
+	RANDOMIZE  reduce 111
+	REDIM  reduce 111
+	SELECT  reduce 111
+	SET  reduce 111
+	STEP  reduce 111
+	SUB  reduce 111
+	THEN  reduce 111
+	TO  reduce 111
+	WEND  reduce 111
+	WHILE  reduce 111
+	WITH  reduce 111
+	COMMENT  reduce 111
+	IDENT  reduce 111
+	COLON  reduce 111
+	R_PAREN  reduce 111
+	COMMA  reduce 111
+	AND  reduce 111
+	OR  reduce 111
+	XOR  reduce 111
+	IMP  reduce 111
+	EQV  reduce 111
+	EOF  reduce 111
+	EOL  reduce 111
+
+
+state 187
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue OR rvalue .  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 112
+	HTML  reduce 112
+	SSI  reduce 112
+	INLINE_VALUE  reduce 112
+	CALL  reduce 112
+	CASE  reduce 112
+	CLASS  reduce 112
+	CONST  reduce 112
+	DIM  reduce 112
+	DO  reduce 112
+	END  reduce 112
+	ELSE  reduce 112
+	ELSEIF  reduce 112
+	ERASE  reduce 112
+	ERROR  reduce 112
+	EXECUTE  reduce 112
+	EXIT  reduce 112
+	FOR  reduce 112
+	FUNCTION  reduce 112
+	IF  reduce 112
+	LOOP  reduce 112
+	ON  reduce 112
+	NEXT  reduce 112
+	OPTION  reduce 112
+	PRIVATE  reduce 112
+	PROPERTY  reduce 112
+	PUBLIC  reduce 112
+	RANDOMIZE  reduce 112
+	REDIM  reduce 112
+	SELECT  reduce 112
+	SET  reduce 112
+	STEP  reduce 112
+	SUB  reduce 112
+	THEN  reduce 112
+	TO  reduce 112
+	WEND  reduce 112
+	WHILE  reduce 112
+	WITH  reduce 112
+	COMMENT  reduce 112
+	IDENT  reduce 112
+	COLON  reduce 112
+	R_PAREN  reduce 112
+	COMMA  reduce 112
+	OR  reduce 112
+	XOR  reduce 112
+	IMP  reduce 112
+	EQV  reduce 112
+	EOF  reduce 112
+	EOL  reduce 112
+
+
+state 188
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue XOR rvalue .  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 113
+	HTML  reduce 113
+	SSI  reduce 113
+	INLINE_VALUE  reduce 113
+	CALL  reduce 113
+	CASE  reduce 113
+	CLASS  reduce 113
+	CONST  reduce 113
+	DIM  reduce 113
+	DO  reduce 113
+	END  reduce 113
+	ELSE  reduce 113
+	ELSEIF  reduce 113
+	ERASE  reduce 113
+	ERROR  reduce 113
+	EXECUTE  reduce 113
+	EXIT  reduce 113
+	FOR  reduce 113
+	FUNCTION  reduce 113
+	IF  reduce 113
+	LOOP  reduce 113
+	ON  reduce 113
+	NEXT  reduce 113
+	OPTION  reduce 113
+	PRIVATE  reduce 113
+	PROPERTY  reduce 113
+	PUBLIC  reduce 113
+	RANDOMIZE  reduce 113
+	REDIM  reduce 113
+	SELECT  reduce 113
+	SET  reduce 113
+	STEP  reduce 113
+	SUB  reduce 113
+	THEN  reduce 113
+	TO  reduce 113
+	WEND  reduce 113
+	WHILE  reduce 113
+	WITH  reduce 113
+	COMMENT  reduce 113
+	IDENT  reduce 113
+	COLON  reduce 113
+	R_PAREN  reduce 113
+	COMMA  reduce 113
+	XOR  reduce 113
+	IMP  reduce 113
+	EQV  reduce 113
+	EOF  reduce 113
+	EOL  reduce 113
+
+
+state 189
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue IMP rvalue .  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 114
+	HTML  reduce 114
+	SSI  reduce 114
+	INLINE_VALUE  reduce 114
+	CALL  reduce 114
+	CASE  reduce 114
+	CLASS  reduce 114
+	CONST  reduce 114
+	DIM  reduce 114
+	DO  reduce 114
+	END  reduce 114
+	ELSE  reduce 114
+	ELSEIF  reduce 114
+	ERASE  reduce 114
+	ERROR  reduce 114
+	EXECUTE  reduce 114
+	EXIT  reduce 114
+	FOR  reduce 114
+	FUNCTION  reduce 114
+	IF  reduce 114
+	LOOP  reduce 114
+	ON  reduce 114
+	NEXT  reduce 114
+	OPTION  reduce 114
+	PRIVATE  reduce 114
+	PROPERTY  reduce 114
+	PUBLIC  reduce 114
+	RANDOMIZE  reduce 114
+	REDIM  reduce 114
+	SELECT  reduce 114
+	SET  reduce 114
+	STEP  reduce 114
+	SUB  reduce 114
+	THEN  reduce 114
+	TO  reduce 114
+	WEND  reduce 114
+	WHILE  reduce 114
+	WITH  reduce 114
+	COMMENT  reduce 114
+	IDENT  reduce 114
+	COLON  reduce 114
+	R_PAREN  reduce 114
+	COMMA  reduce 114
+	IMP  reduce 114
+	EOF  reduce 114
+	EOL  reduce 114
+
+
+state 190
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue EQV rvalue .  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	$end  reduce 115
+	HTML  reduce 115
+	SSI  reduce 115
+	INLINE_VALUE  reduce 115
+	CALL  reduce 115
+	CASE  reduce 115
+	CLASS  reduce 115
+	CONST  reduce 115
+	DIM  reduce 115
+	DO  reduce 115
+	END  reduce 115
+	ELSE  reduce 115
+	ELSEIF  reduce 115
+	ERASE  reduce 115
+	ERROR  reduce 115
+	EXECUTE  reduce 115
+	EXIT  reduce 115
+	FOR  reduce 115
+	FUNCTION  reduce 115
+	IF  reduce 115
+	LOOP  reduce 115
+	ON  reduce 115
+	NEXT  reduce 115
+	OPTION  reduce 115
+	PRIVATE  reduce 115
+	PROPERTY  reduce 115
+	PUBLIC  reduce 115
+	RANDOMIZE  reduce 115
+	REDIM  reduce 115
+	SELECT  reduce 115
+	SET  reduce 115
+	STEP  reduce 115
+	SUB  reduce 115
+	THEN  reduce 115
+	TO  reduce 115
+	WEND  reduce 115
+	WHILE  reduce 115
+	WITH  reduce 115
+	COMMENT  reduce 115
+	IDENT  reduce 115
+	COLON  reduce 115
+	R_PAREN  reduce 115
+	COMMA  reduce 115
+	IMP  reduce 115
+	EQV  reduce 115
+	EOF  reduce 115
+	EOL  reduce 115
+
+
+state 191
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue PLUS rvalue .  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	$end  reduce 104
+	HTML  reduce 104
+	SSI  reduce 104
+	INLINE_VALUE  reduce 104
+	CALL  reduce 104
+	CASE  reduce 104
+	CLASS  reduce 104
+	CONST  reduce 104
+	DIM  reduce 104
+	DO  reduce 104
+	END  reduce 104
+	ELSE  reduce 104
+	ELSEIF  reduce 104
+	ERASE  reduce 104
+	ERROR  reduce 104
+	EXECUTE  reduce 104
+	EXIT  reduce 104
+	FOR  reduce 104
+	FUNCTION  reduce 104
+	IF  reduce 104
+	IS  reduce 104
+	LOOP  reduce 104
+	ON  reduce 104
+	NEXT  reduce 104
+	OPTION  reduce 104
+	PRIVATE  reduce 104
+	PROPERTY  reduce 104
+	PUBLIC  reduce 104
+	RANDOMIZE  reduce 104
+	REDIM  reduce 104
+	SELECT  reduce 104
+	SET  reduce 104
+	STEP  reduce 104
+	SUB  reduce 104
+	THEN  reduce 104
+	TO  reduce 104
+	WEND  reduce 104
+	WHILE  reduce 104
+	WITH  reduce 104
+	COMMENT  reduce 104
+	IDENT  reduce 104
+	COLON  reduce 104
+	R_PAREN  reduce 104
+	COMMA  reduce 104
+	EQUALS  reduce 104
+	NOT_EQUALS  reduce 104
+	LESS  reduce 104
+	GREATER  reduce 104
+	LESS_EQUAL  reduce 104
+	GREATER_EQUAL  reduce 104
+	AND  reduce 104
+	OR  reduce 104
+	XOR  reduce 104
+	IMP  reduce 104
+	EQV  reduce 104
+	PLUS  reduce 104
+	MINUS  reduce 104
+	CONCAT  reduce 104
+	EOF  reduce 104
+	EOL  reduce 104
+
+
+state 192
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue MINUS rvalue .  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	$end  reduce 105
+	HTML  reduce 105
+	SSI  reduce 105
+	INLINE_VALUE  reduce 105
+	CALL  reduce 105
+	CASE  reduce 105
+	CLASS  reduce 105
+	CONST  reduce 105
+	DIM  reduce 105
+	DO  reduce 105
+	END  reduce 105
+	ELSE  reduce 105
+	ELSEIF  reduce 105
+	ERASE  reduce 105
+	ERROR  reduce 105
+	EXECUTE  reduce 105
+	EXIT  reduce 105
+	FOR  reduce 105
+	FUNCTION  reduce 105
+	IF  reduce 105
+	IS  reduce 105
+	LOOP  reduce 105
+	ON  reduce 105
+	NEXT  reduce 105
+	OPTION  reduce 105
+	PRIVATE  reduce 105
+	PROPERTY  reduce 105
+	PUBLIC  reduce 105
+	RANDOMIZE  reduce 105
+	REDIM  reduce 105
+	SELECT  reduce 105
+	SET  reduce 105
+	STEP  reduce 105
+	SUB  reduce 105
+	THEN  reduce 105
+	TO  reduce 105
+	WEND  reduce 105
+	WHILE  reduce 105
+	WITH  reduce 105
+	COMMENT  reduce 105
+	IDENT  reduce 105
+	COLON  reduce 105
+	R_PAREN  reduce 105
+	COMMA  reduce 105
+	EQUALS  reduce 105
+	NOT_EQUALS  reduce 105
+	LESS  reduce 105
+	GREATER  reduce 105
+	LESS_EQUAL  reduce 105
+	GREATER_EQUAL  reduce 105
+	AND  reduce 105
+	OR  reduce 105
+	XOR  reduce 105
+	IMP  reduce 105
+	EQV  reduce 105
+	PLUS  reduce 105
+	MINUS  reduce 105
+	CONCAT  reduce 105
+	EOF  reduce 105
+	EOL  reduce 105
+
+
+state 193
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue MULT rvalue .  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EXP  shift 134
+	$end  reduce 106
+	HTML  reduce 106
+	SSI  reduce 106
+	INLINE_VALUE  reduce 106
+	CALL  reduce 106
+	CASE  reduce 106
+	CLASS  reduce 106
+	CONST  reduce 106
+	DIM  reduce 106
+	DO  reduce 106
+	END  reduce 106
+	ELSE  reduce 106
+	ELSEIF  reduce 106
+	ERASE  reduce 106
+	ERROR  reduce 106
+	EXECUTE  reduce 106
+	EXIT  reduce 106
+	FOR  reduce 106
+	FUNCTION  reduce 106
+	IF  reduce 106
+	IS  reduce 106
+	LOOP  reduce 106
+	ON  reduce 106
+	NEXT  reduce 106
+	OPTION  reduce 106
+	PRIVATE  reduce 106
+	PROPERTY  reduce 106
+	PUBLIC  reduce 106
+	RANDOMIZE  reduce 106
+	REDIM  reduce 106
+	SELECT  reduce 106
+	SET  reduce 106
+	STEP  reduce 106
+	SUB  reduce 106
+	THEN  reduce 106
+	TO  reduce 106
+	WEND  reduce 106
+	WHILE  reduce 106
+	WITH  reduce 106
+	COMMENT  reduce 106
+	IDENT  reduce 106
+	COLON  reduce 106
+	R_PAREN  reduce 106
+	COMMA  reduce 106
+	EQUALS  reduce 106
+	NOT_EQUALS  reduce 106
+	LESS  reduce 106
+	GREATER  reduce 106
+	LESS_EQUAL  reduce 106
+	GREATER_EQUAL  reduce 106
+	AND  reduce 106
+	OR  reduce 106
+	XOR  reduce 106
+	IMP  reduce 106
+	EQV  reduce 106
+	PLUS  reduce 106
+	MINUS  reduce 106
+	MULT  reduce 106
+	DIV  reduce 106
+	INTDIV  reduce 106
+	MOD  reduce 106
+	CONCAT  reduce 106
+	EOF  reduce 106
+	EOL  reduce 106
+
+
+state 194
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue DIV rvalue .  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	EXP  shift 134
+	$end  reduce 107
+	HTML  reduce 107
+	SSI  reduce 107
+	INLINE_VALUE  reduce 107
+	CALL  reduce 107
+	CASE  reduce 107
+	CLASS  reduce 107
+	CONST  reduce 107
+	DIM  reduce 107
+	DO  reduce 107
+	END  reduce 107
+	ELSE  reduce 107
+	ELSEIF  reduce 107
+	ERASE  reduce 107
+	ERROR  reduce 107
+	EXECUTE  reduce 107
+	EXIT  reduce 107
+	FOR  reduce 107
+	FUNCTION  reduce 107
+	IF  reduce 107
+	IS  reduce 107
+	LOOP  reduce 107
+	ON  reduce 107
+	NEXT  reduce 107
+	OPTION  reduce 107
+	PRIVATE  reduce 107
+	PROPERTY  reduce 107
+	PUBLIC  reduce 107
+	RANDOMIZE  reduce 107
+	REDIM  reduce 107
+	SELECT  reduce 107
+	SET  reduce 107
+	STEP  reduce 107
+	SUB  reduce 107
+	THEN  reduce 107
+	TO  reduce 107
+	WEND  reduce 107
+	WHILE  reduce 107
+	WITH  reduce 107
+	COMMENT  reduce 107
+	IDENT  reduce 107
+	COLON  reduce 107
+	R_PAREN  reduce 107
+	COMMA  reduce 107
+	EQUALS  reduce 107
+	NOT_EQUALS  reduce 107
+	LESS  reduce 107
+	GREATER  reduce 107
+	LESS_EQUAL  reduce 107
+	GREATER_EQUAL  reduce 107
+	AND  reduce 107
+	OR  reduce 107
+	XOR  reduce 107
+	IMP  reduce 107
+	EQV  reduce 107
+	PLUS  reduce 107
+	MINUS  reduce 107
+	MULT  reduce 107
+	DIV  reduce 107
+	INTDIV  reduce 107
+	MOD  reduce 107
+	CONCAT  reduce 107
+	EOF  reduce 107
+	EOL  reduce 107
+
+
+state 195
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue INTDIV rvalue .  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	MULT  shift 131
+	DIV  shift 132
+	EXP  shift 134
+	$end  reduce 109
+	HTML  reduce 109
+	SSI  reduce 109
+	INLINE_VALUE  reduce 109
+	CALL  reduce 109
+	CASE  reduce 109
+	CLASS  reduce 109
+	CONST  reduce 109
+	DIM  reduce 109
+	DO  reduce 109
+	END  reduce 109
+	ELSE  reduce 109
+	ELSEIF  reduce 109
+	ERASE  reduce 109
+	ERROR  reduce 109
+	EXECUTE  reduce 109
+	EXIT  reduce 109
+	FOR  reduce 109
+	FUNCTION  reduce 109
+	IF  reduce 109
+	IS  reduce 109
+	LOOP  reduce 109
+	ON  reduce 109
+	NEXT  reduce 109
+	OPTION  reduce 109
+	PRIVATE  reduce 109
+	PROPERTY  reduce 109
+	PUBLIC  reduce 109
+	RANDOMIZE  reduce 109
+	REDIM  reduce 109
+	SELECT  reduce 109
+	SET  reduce 109
+	STEP  reduce 109
+	SUB  reduce 109
+	THEN  reduce 109
+	TO  reduce 109
+	WEND  reduce 109
+	WHILE  reduce 109
+	WITH  reduce 109
+	COMMENT  reduce 109
+	IDENT  reduce 109
+	COLON  reduce 109
+	R_PAREN  reduce 109
+	COMMA  reduce 109
+	EQUALS  reduce 109
+	NOT_EQUALS  reduce 109
+	LESS  reduce 109
+	GREATER  reduce 109
+	LESS_EQUAL  reduce 109
+	GREATER_EQUAL  reduce 109
+	AND  reduce 109
+	OR  reduce 109
+	XOR  reduce 109
+	IMP  reduce 109
+	EQV  reduce 109
+	PLUS  reduce 109
+	MINUS  reduce 109
+	INTDIV  reduce 109
+	MOD  reduce 109
+	CONCAT  reduce 109
+	EOF  reduce 109
+	EOL  reduce 109
+
+
+state 196
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue EXP rvalue .  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	.  reduce 110
+
+
+state 197
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue MOD rvalue .  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	$end  reduce 108
+	HTML  reduce 108
+	SSI  reduce 108
+	INLINE_VALUE  reduce 108
+	CALL  reduce 108
+	CASE  reduce 108
+	CLASS  reduce 108
+	CONST  reduce 108
+	DIM  reduce 108
+	DO  reduce 108
+	END  reduce 108
+	ELSE  reduce 108
+	ELSEIF  reduce 108
+	ERASE  reduce 108
+	ERROR  reduce 108
+	EXECUTE  reduce 108
+	EXIT  reduce 108
+	FOR  reduce 108
+	FUNCTION  reduce 108
+	IF  reduce 108
+	IS  reduce 108
+	LOOP  reduce 108
+	ON  reduce 108
+	NEXT  reduce 108
+	OPTION  reduce 108
+	PRIVATE  reduce 108
+	PROPERTY  reduce 108
+	PUBLIC  reduce 108
+	RANDOMIZE  reduce 108
+	REDIM  reduce 108
+	SELECT  reduce 108
+	SET  reduce 108
+	STEP  reduce 108
+	SUB  reduce 108
+	THEN  reduce 108
+	TO  reduce 108
+	WEND  reduce 108
+	WHILE  reduce 108
+	WITH  reduce 108
+	COMMENT  reduce 108
+	IDENT  reduce 108
+	COLON  reduce 108
+	R_PAREN  reduce 108
+	COMMA  reduce 108
+	EQUALS  reduce 108
+	NOT_EQUALS  reduce 108
+	LESS  reduce 108
+	GREATER  reduce 108
+	LESS_EQUAL  reduce 108
+	GREATER_EQUAL  reduce 108
+	AND  reduce 108
+	OR  reduce 108
+	XOR  reduce 108
+	IMP  reduce 108
+	EQV  reduce 108
+	PLUS  reduce 108
+	MINUS  reduce 108
+	MOD  reduce 108
+	CONCAT  reduce 108
+	EOF  reduce 108
+	EOL  reduce 108
+
+
+state 198
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+	rvalue : rvalue CONCAT rvalue .  (124)
+
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	$end  reduce 124
+	HTML  reduce 124
+	SSI  reduce 124
+	INLINE_VALUE  reduce 124
+	CALL  reduce 124
+	CASE  reduce 124
+	CLASS  reduce 124
+	CONST  reduce 124
+	DIM  reduce 124
+	DO  reduce 124
+	END  reduce 124
+	ELSE  reduce 124
+	ELSEIF  reduce 124
+	ERASE  reduce 124
+	ERROR  reduce 124
+	EXECUTE  reduce 124
+	EXIT  reduce 124
+	FOR  reduce 124
+	FUNCTION  reduce 124
+	IF  reduce 124
+	IS  reduce 124
+	LOOP  reduce 124
+	ON  reduce 124
+	NEXT  reduce 124
+	OPTION  reduce 124
+	PRIVATE  reduce 124
+	PROPERTY  reduce 124
+	PUBLIC  reduce 124
+	RANDOMIZE  reduce 124
+	REDIM  reduce 124
+	SELECT  reduce 124
+	SET  reduce 124
+	STEP  reduce 124
+	SUB  reduce 124
+	THEN  reduce 124
+	TO  reduce 124
+	WEND  reduce 124
+	WHILE  reduce 124
+	WITH  reduce 124
+	COMMENT  reduce 124
+	IDENT  reduce 124
+	COLON  reduce 124
+	R_PAREN  reduce 124
+	COMMA  reduce 124
+	EQUALS  reduce 124
+	NOT_EQUALS  reduce 124
+	LESS  reduce 124
+	GREATER  reduce 124
+	LESS_EQUAL  reduce 124
+	GREATER_EQUAL  reduce 124
+	AND  reduce 124
+	OR  reduce 124
+	XOR  reduce 124
+	IMP  reduce 124
+	EQV  reduce 124
+	CONCAT  reduce 124
+	EOF  reduce 124
+	EOL  reduce 124
+
+
+state 199
+	optional_inherits : INHERITS permissive_ident .  (47)
+
+	.  reduce 47
+
+
+state 200
+	statement_body : CLASS permissive_ident optional_inherits compound_block . END CLASS  (19)
+
+	END  shift 241
+	.  error
+
+
+state 201
+	statement_body : CONST permissive_ident EQUALS rvalue .  (20)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 20
+	SSI  reduce 20
+	INLINE_VALUE  reduce 20
+	END  reduce 20
+	ELSE  reduce 20
+	ELSEIF  reduce 20
+	COMMENT  reduce 20
+	COLON  reduce 20
+	EOF  reduce 20
+	EOL  reduce 20
+
+
+state 202
+	identifier_comma_list : identifier COMMA identifier_comma_list .  (145)
+
+	.  reduce 145
+
+
+state 203
+	statement_body : DO compound_block LOOP do_condition .  (23)
+
+	.  reduce 23
+
+
+state 204
+	statement_body : DO do_condition compound_block LOOP .  (22)
+
+	.  reduce 22
+
+
+state 205
+	for_declaration : EACH permissive_ident IN . rvalue  (69)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 242
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 206
+	for_declaration : permissive_ident EQUALS rvalue . TO rvalue optional_step  (68)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	TO  shift 243
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	.  error
+
+
+state 207
+	statement_body : FOR for_declaration compound_block NEXT .  (27)
+
+	.  reduce 27
+
+
+state 208
+	formal_param : BYREF . formal_param_ident  (87)
+
+	ERROR  shift 14
+	EXECUTE  shift 210
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 212
+	formal_param_ident  goto 244
+
+
+state 209
+	formal_param : BYVAL . formal_param_ident  (86)
+
+	ERROR  shift 14
+	EXECUTE  shift 210
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 212
+	formal_param_ident  goto 245
+
+
+state 210
+	formal_param_ident : EXECUTE .  (90)
+
+	.  reduce 90
+
+
+state 211
+	maybe_formal_param_list : L_PAREN R_PAREN .  (82)
+
+	.  reduce 82
+
+
+state 212
+	formal_param_ident : permissive_ident .  (89)
+
+	.  reduce 89
+
+
+state 213
+	maybe_formal_param_list : L_PAREN formal_param_list . R_PAREN  (81)
+
+	R_PAREN  shift 246
+	.  error
+
+
+state 214
+	formal_param_list : formal_param .  (84)
+	formal_param_list : formal_param . COMMA formal_param_list  (85)
+
+	COMMA  shift 247
+	R_PAREN  reduce 84
+
+
+state 215
+	formal_param : formal_param_ident .  (88)
+
+	.  reduce 88
+
+
+state 216
+	subroutine_definition : permissive_ident maybe_formal_param_list compound_block .  (80)
+
+	.  reduce 80
+
+
+state 217
+	statement_body : FUNCTION subroutine_definition END FUNCTION .  (28)
+
+	.  reduce 28
+
+
+state 218
+	statement_body : FUNCTION subroutine_definition END SUB .  (45)
+
+	.  reduce 45
+
+
+state 219
+	if_then : compound_block . if_else  (74)
+
+	END  shift 248
+	ELSE  shift 249
+	ELSEIF  shift 250
+	.  error
+
+	if_else  goto 251
+
+
+state 220
+	if_then : statement .  (72)
+	if_then : statement . if_else  (73)
+
+	END  shift 248
+	ELSE  shift 249
+	ELSEIF  shift 250
+	HTML  reduce 72
+	SSI  reduce 72
+	INLINE_VALUE  reduce 72
+	COMMENT  reduce 72
+	COLON  reduce 72
+	EOF  reduce 72
+	EOL  reduce 72
+
+	if_else  goto 252
+
+
+state 221
+	statement_body : IF rvalue THEN if_then .  (29)
+
+	.  reduce 29
+
+
+state 222
+	on_error_statement : GOTO INT .  (92)
+
+	.  reduce 92
+
+
+state 223
+	on_error_statement : GOTO identifier .  (93)
+	identifier : identifier . DOT permissive_ident  (140)
+	identifier : identifier . DOT END  (141)
+	identifier : identifier . DOT EXECUTE  (142)
+	identifier : identifier . L_PAREN rvalue_list R_PAREN  (143)
+
+	L_PAREN  shift 137
+	DOT  shift 105
+	HTML  reduce 93
+	SSI  reduce 93
+	INLINE_VALUE  reduce 93
+	END  reduce 93
+	ELSE  reduce 93
+	ELSEIF  reduce 93
+	COMMENT  reduce 93
+	COLON  reduce 93
+	EOF  reduce 93
+	EOL  reduce 93
+
+
+state 224
+	on_error_statement : RESUME NEXT .  (91)
+
+	.  reduce 91
+
+
+state 225
+	at_least_one_separator : separator . at_least_one_separator  (9)
+	at_least_one_separator : separator .  (10)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	CASE  reduce 10
+	END  reduce 10
+
+	separator  goto 225
+	at_least_one_separator  goto 253
+
+
+state 226
+	select_statement : SELECT CASE rvalue at_least_one_separator . select_statement_list END SELECT  (94)
+	select_statement_list : .  (96)
+
+	CASE  shift 254
+	END  reduce 96
+
+	select_statement_list  goto 255
+
+
+state 227
+	statement_body : SET identifier EQUALS rvalue .  (38)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 38
+	SSI  reduce 38
+	INLINE_VALUE  reduce 38
+	END  reduce 38
+	ELSE  reduce 38
+	ELSEIF  reduce 38
+	COMMENT  reduce 38
+	COLON  reduce 38
+	EOF  reduce 38
+	EOL  reduce 38
+
+
+state 228
+	statement_body : SUB subroutine_definition END FUNCTION .  (46)
+
+	.  reduce 46
+
+
+state 229
+	statement_body : SUB subroutine_definition END SUB .  (39)
+
+	.  reduce 39
+
+
+state 230
+	statement_body : WHILE rvalue compound_block WEND .  (40)
+
+	.  reduce 40
+
+
+state 231
+	statement_body : WITH identifier separator compound_block . END WITH  (41)
+
+	END  shift 256
+	.  error
+
+
+state 232
+	identifier : identifier L_PAREN rvalue_list R_PAREN .  (143)
+
+	.  reduce 143
+
+
+state 233
+	rvalue_list : rvalue COMMA rvalue_list .  (136)
+
+	.  reduce 136
+
+
+state 234
+	member_statement : FUNCTION subroutine_definition . END FUNCTION  (52)
+
+	END  shift 257
+	.  error
+
+
+state 235
+	property_action : GET .  (57)
+
+	.  reduce 57
+
+
+state 236
+	property_action : LET .  (59)
+
+	.  reduce 59
+
+
+state 237
+	property_action : SET .  (58)
+
+	.  reduce 58
+
+
+state 238
+	member_statement : PROPERTY property_action . subroutine_definition END PROPERTY  (54)
+
+	ERROR  shift 14
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 88
+	subroutine_definition  goto 258
+
+
+state 239
+	member_statement : SUB subroutine_definition . END SUB  (53)
+
+	END  shift 259
+	.  error
+
+
+state 240
+	rvalue : EVAL L_PAREN rvalue R_PAREN .  (101)
+
+	.  reduce 101
+
+
+state 241
+	statement_body : CLASS permissive_ident optional_inherits compound_block END . CLASS  (19)
+
+	CLASS  shift 260
+	.  error
+
+
+state 242
+	for_declaration : EACH permissive_ident IN rvalue .  (69)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 69
+	SSI  reduce 69
+	INLINE_VALUE  reduce 69
+	COMMENT  reduce 69
+	COLON  reduce 69
+	EOL  reduce 69
+
+
+state 243
+	for_declaration : permissive_ident EQUALS rvalue TO . rvalue optional_step  (68)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 261
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 244
+	formal_param : BYREF formal_param_ident .  (87)
+
+	.  reduce 87
+
+
+state 245
+	formal_param : BYVAL formal_param_ident .  (86)
+
+	.  reduce 86
+
+
+state 246
+	maybe_formal_param_list : L_PAREN formal_param_list R_PAREN .  (81)
+
+	.  reduce 81
+
+
+state 247
+	formal_param_list : formal_param COMMA . formal_param_list  (85)
+
+	BYREF  shift 208
+	BYVAL  shift 209
+	ERROR  shift 14
+	EXECUTE  shift 210
+	PROPERTY  shift 23
+	IDENT  shift 33
+	.  error
+
+	permissive_ident  goto 212
+	formal_param_list  goto 262
+	formal_param  goto 214
+	formal_param_ident  goto 215
+
+
+state 248
+	if_else : END . IF  (79)
+
+	IF  shift 263
+	.  error
+
+
+state 249
+	if_else : ELSE . statement  (76)
+	if_else : ELSE . statement END IF  (77)
+	if_else : ELSE . compound_block END IF  (78)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 264
+	separator  goto 74
+	statement  goto 265
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 250
+	if_else : ELSEIF . rvalue THEN if_then  (75)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 266
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 251
+	if_then : compound_block if_else .  (74)
+
+	.  reduce 74
+
+
+state 252
+	if_then : statement if_else .  (73)
+
+	.  reduce 73
+
+
+state 253
+	at_least_one_separator : separator at_least_one_separator .  (9)
+
+	.  reduce 9
+
+
+state 254
+	select_statement_list : CASE . select_rvalue compound_block select_statement_list  (95)
+	rvalue_list : .  (138)
+
+	ELSE  shift 267
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	COMMA  shift 106
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	HTML  reduce 138
+	SSI  reduce 138
+	INLINE_VALUE  reduce 138
+	COMMENT  reduce 138
+	COLON  reduce 138
+	EOL  reduce 138
+
+	rvalue  goto 108
+	identifier  goto 61
+	permissive_ident  goto 43
+	rvalue_list  goto 268
+	select_rvalue  goto 269
+	literal  goto 62
+
+
+state 255
+	select_statement : SELECT CASE rvalue at_least_one_separator select_statement_list . END SELECT  (94)
+
+	END  shift 270
+	.  error
+
+
+state 256
+	statement_body : WITH identifier separator compound_block END . WITH  (41)
+
+	WITH  shift 271
+	.  error
+
+
+state 257
+	member_statement : FUNCTION subroutine_definition END . FUNCTION  (52)
+
+	FUNCTION  shift 272
+	.  error
+
+
+state 258
+	member_statement : PROPERTY property_action subroutine_definition . END PROPERTY  (54)
+
+	END  shift 273
+	.  error
+
+
+state 259
+	member_statement : SUB subroutine_definition END . SUB  (53)
+
+	SUB  shift 274
+	.  error
+
+
+state 260
+	statement_body : CLASS permissive_ident optional_inherits compound_block END CLASS .  (19)
+
+	.  reduce 19
+
+
+state 261
+	for_declaration : permissive_ident EQUALS rvalue TO rvalue . optional_step  (68)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+	optional_step : .  (71)
+
+	IS  shift 117
+	STEP  shift 275
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 71
+	SSI  reduce 71
+	INLINE_VALUE  reduce 71
+	COMMENT  reduce 71
+	COLON  reduce 71
+	EOL  reduce 71
+
+	optional_step  goto 276
+
+
+state 262
+	formal_param_list : formal_param COMMA formal_param_list .  (85)
+
+	.  reduce 85
+
+
+state 263
+	if_else : END IF .  (79)
+
+	.  reduce 79
+
+
+state 264
+	if_else : ELSE compound_block . END IF  (78)
+
+	END  shift 277
+	.  error
+
+
+state 265
+	if_else : ELSE statement .  (76)
+	if_else : ELSE statement . END IF  (77)
+
+	.  reduce 76
+
+
+state 266
+	if_else : ELSEIF rvalue . THEN if_then  (75)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	THEN  shift 279
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	.  error
+
+
+state 267
+	select_rvalue : ELSE .  (97)
+
+	.  reduce 97
+
+
+state 268
+	select_rvalue : rvalue_list .  (98)
+
+	.  reduce 98
+
+
+state 269
+	select_statement_list : CASE select_rvalue . compound_block select_statement_list  (95)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	COMMENT  shift 32
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 280
+	separator  goto 74
+
+
+state 270
+	select_statement : SELECT CASE rvalue at_least_one_separator select_statement_list END . SELECT  (94)
+
+	SELECT  shift 281
+	.  error
+
+
+state 271
+	statement_body : WITH identifier separator compound_block END WITH .  (41)
+
+	.  reduce 41
+
+
+state 272
+	member_statement : FUNCTION subroutine_definition END FUNCTION .  (52)
+
+	.  reduce 52
+
+
+state 273
+	member_statement : PROPERTY property_action subroutine_definition END . PROPERTY  (54)
+
+	PROPERTY  shift 282
+	.  error
+
+
+state 274
+	member_statement : SUB subroutine_definition END SUB .  (53)
+
+	.  reduce 53
+
+
+state 275
+	optional_step : STEP . rvalue  (70)
+
+	ERROR  shift 14
+	EVAL  shift 46
+	PROPERTY  shift 23
+	IDENT  shift 33
+	L_PAREN  shift 47
+	NOT  shift 48
+	MINUS  shift 49
+	NEW  shift 50
+	INT  shift 51
+	HEX  shift 52
+	OCT  shift 53
+	FLOAT  shift 54
+	STRING  shift 55
+	TRUE  shift 56
+	FALSE  shift 57
+	NULL  shift 58
+	NOTHING  shift 59
+	.  error
+
+	rvalue  goto 283
+	identifier  goto 61
+	permissive_ident  goto 43
+	literal  goto 62
+
+
+state 276
+	for_declaration : permissive_ident EQUALS rvalue TO rvalue optional_step .  (68)
+
+	.  reduce 68
+
+
+state 277
+	if_else : ELSE compound_block END . IF  (78)
+
+	IF  shift 284
+	.  error
+
+
+state 278
+	if_else : ELSE statement END . IF  (77)
+
+	IF  shift 285
+	.  error
+
+
+state 279
+	if_else : ELSEIF rvalue THEN . if_then  (75)
+
+	HTML  shift 5
+	SSI  shift 6
+	INLINE_VALUE  shift 7
+	CALL  shift 8
+	CLASS  shift 9
+	CONST  shift 10
+	DIM  shift 11
+	DO  shift 12
+	ERASE  shift 13
+	ERROR  shift 14
+	EXECUTE  shift 15
+	EXIT  shift 16
+	FOR  shift 17
+	FUNCTION  shift 18
+	IF  shift 19
+	ON  shift 20
+	OPTION  shift 21
+	PRIVATE  shift 22
+	PROPERTY  shift 23
+	PUBLIC  shift 24
+	RANDOMIZE  shift 25
+	REDIM  shift 26
+	SELECT  shift 27
+	SET  shift 28
+	SUB  shift 29
+	WHILE  shift 30
+	WITH  shift 31
+	COMMENT  shift 32
+	IDENT  shift 33
+	COLON  shift 34
+	EOL  shift 36
+	.  error
+
+	compound_block  goto 219
+	separator  goto 74
+	statement  goto 220
+	statement_body  goto 41
+	identifier  goto 42
+	permissive_ident  goto 43
+	if_then  goto 286
+	member_access_level  goto 44
+	select_statement  goto 45
+
+
+state 280
+	select_statement_list : CASE select_rvalue compound_block . select_statement_list  (95)
+	select_statement_list : .  (96)
+
+	CASE  shift 254
+	END  reduce 96
+
+	select_statement_list  goto 287
+
+
+state 281
+	select_statement : SELECT CASE rvalue at_least_one_separator select_statement_list END SELECT .  (94)
+
+	.  reduce 94
+
+
+state 282
+	member_statement : PROPERTY property_action subroutine_definition END PROPERTY .  (54)
+
+	.  reduce 54
+
+
+state 283
+	optional_step : STEP rvalue .  (70)
+	rvalue : rvalue . PLUS rvalue  (104)
+	rvalue : rvalue . MINUS rvalue  (105)
+	rvalue : rvalue . MULT rvalue  (106)
+	rvalue : rvalue . DIV rvalue  (107)
+	rvalue : rvalue . MOD rvalue  (108)
+	rvalue : rvalue . INTDIV rvalue  (109)
+	rvalue : rvalue . EXP rvalue  (110)
+	rvalue : rvalue . AND rvalue  (111)
+	rvalue : rvalue . OR rvalue  (112)
+	rvalue : rvalue . XOR rvalue  (113)
+	rvalue : rvalue . IMP rvalue  (114)
+	rvalue : rvalue . EQV rvalue  (115)
+	rvalue : rvalue . EQUALS rvalue  (117)
+	rvalue : rvalue . NOT_EQUALS rvalue  (118)
+	rvalue : rvalue . LESS rvalue  (119)
+	rvalue : rvalue . GREATER rvalue  (120)
+	rvalue : rvalue . LESS_EQUAL rvalue  (121)
+	rvalue : rvalue . GREATER_EQUAL rvalue  (122)
+	rvalue : rvalue . IS rvalue  (123)
+	rvalue : rvalue . CONCAT rvalue  (124)
+
+	IS  shift 117
+	EQUALS  shift 118
+	NOT_EQUALS  shift 119
+	LESS  shift 120
+	GREATER  shift 121
+	LESS_EQUAL  shift 122
+	GREATER_EQUAL  shift 123
+	AND  shift 124
+	OR  shift 125
+	XOR  shift 126
+	IMP  shift 127
+	EQV  shift 128
+	PLUS  shift 129
+	MINUS  shift 130
+	MULT  shift 131
+	DIV  shift 132
+	INTDIV  shift 133
+	EXP  shift 134
+	MOD  shift 135
+	CONCAT  shift 136
+	HTML  reduce 70
+	SSI  reduce 70
+	INLINE_VALUE  reduce 70
+	COMMENT  reduce 70
+	COLON  reduce 70
+	EOL  reduce 70
+
+
+state 284
+	if_else : ELSE compound_block END IF .  (78)
+
+	.  reduce 78
+
+
+state 285
+	if_else : ELSE statement END IF .  (77)
+
+	.  reduce 77
+
+
+state 286
+	if_else : ELSEIF rvalue THEN if_then .  (75)
+
+	.  reduce 75
+
+
+state 287
+	select_statement_list : CASE select_rvalue compound_block select_statement_list .  (95)
+
+	.  reduce 95
+
+
+State 42 contains 10 reduce/reduce conflicts.
+
+
+105 terminals, 36 nonterminals
+152 grammar rules, 288 states

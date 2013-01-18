@@ -1,0 +1,82 @@
+ASP CC (Converter/Compiler)
+===========================
+
+NOTE: This is an old and unmaintained project from years ago, before I knew
+what I know now about language theory and implementation.
+This README remains accurate, however. I would love to see this adopted by anyone
+still working in ASP (are you out there?) who would like to add some speed,
+type safety, and openness to their life.
+
+ASPCC is a vbscript interpreter written on OCaml, extensible via OCaml, with
+implementations for most vbscript functions and ASP objects.  It also has a
+built in server-side include engine to mimic IIS's behavior.
+
+Feature Summary:
+
+ * All VbScript syntax supported
+ * Most VbScript functions implemented
+ * Most ASP intrinsic objects implemented
+ * Extensible via Ocaml 
+ * Includes documentation generator (like ocamldoc or javadoc)
+
+
+Planned Features:
+
+ * MSXML implementation (partially completed)
+ * Class inheritance
+ * Class "shared" functions - a primitive namespacing technique
+ * ADO implementation
+ * JIT compilation
+
+Requirements
+------------
+
+ASPCC is written in [Objective Caml](http://www.ocaml.org),
+a HOT (Higher-Order, Typed) programming language.
+
+ASPCC's build process requires [findlib](http://www.ocaml-programming.de/packages).
+
+Various functionality depends on open source implementations:
+
+ - `MS.XMLDOM` compatability will require PXP or gmetadome 
+ - Date functions require ocamlnet for parsing.
+ - In the future, session may use [PersiL](http://pauillac.inria.fr/~starynke/persil/) (right now there is no session).
+
+
+Related work
+------------
+
+(and why ASPCC isn't any of them):
+
+ - Asp2Php is a project with the same goals, but a different method.  ASPCC is
+   a more traditionally structured compiler, rather than a lexical translator.
+   Be sure to try both Asp2Php and ASPCC; one may translate more of your code
+   base properly.
+
+ - Arrowhead ASP Server is a java servlet that will allow you to run ASP code
+   on many platforms.  This could help you transition your company away from
+   ASP/IIS, but ASPCC intends to additionally provide a migration path away
+   from ASP entirely to either PHP or an OCaml core. Another consideration is that
+   at the time of this writing, there is no completely free implementation of
+   Java.
+
+ - Gnome basic supports ASP pages, on its own, and through mod_gb (outdated).
+   The same rationale as for Arrowhead applies to GB.
+
+
+Copyright and License
+---------------------
+
+Copyright 2012- Kenneth Knowles
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
